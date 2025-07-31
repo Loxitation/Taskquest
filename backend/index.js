@@ -132,7 +132,8 @@ app.get('/api/archive', (req, res) => {
 
 // GET/POST Player Stats (EXP, rewards, etc.)
 app.get('/api/player-stats', (req, res) => {
-  const stats = readJSON(PLAYER_STATS_FILE);
+  let stats = readJSON(PLAYER_STATS_FILE);
+  if (!Array.isArray(stats)) stats = [];
   res.json(stats);
 });
 
