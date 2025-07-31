@@ -127,8 +127,10 @@ function renderTasks() {
     filtered.forEach((task, idx) => {
       const li = document.createElement("li");
       if (task.status === "done") li.classList.add("done");
-      let info = `${task.title} (S${task.difficulty} / D${task.urgency})`;
-      // Add due date and countdown
+      // Title on top line
+      let info = `<div style='font-weight:bold;font-size:1.08em;'>${task.title}</div>`;
+      // Details below
+      let details = `S${task.difficulty} / D${task.urgency}`;
       if (task.dueDate) {
         const due = new Date(task.dueDate);
         const now = new Date();
@@ -139,14 +141,14 @@ function renderTasks() {
           else if (diffDays === 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ffb347;'>Heute fällig!</span>)`;
           else countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ff4d4d;'>Überfällig!</span>)`;
         }
-        info += countdown;
+        details += countdown;
       }
       if (task.status === "submitted" && task.approver === currentPlayer) {
-        info += `<br><b>Kommentar:</b> ${task.commentary || "-"}`;
-        info += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
+        details += `<br><b>Kommentar:</b> ${task.commentary || "-"}`;
+        details += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
       }
       li.innerHTML = `
-        <span>${info}</span>
+        <span>${info}<div style='font-size:0.98em;margin-top:0.2em;'>${details}</div></span>
         <div class="task-actions"></div>
       `;
       const actions = li.querySelector(".task-actions");
@@ -191,6 +193,48 @@ function renderTasks() {
         actions.innerHTML = `<button class="delete-task">🗑️</button>`;
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
       }
+      // Add controls to change difficulty and urgency for every task
+      const difficultySelect = document.createElement('select');
+      for (let i = 1; i <= 4; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `S${i}`;
+        if (task.difficulty == i) opt.selected = true;
+        difficultySelect.appendChild(opt);
+      }
+      difficultySelect.style.marginLeft = '0.5em';
+      difficultySelect.title = 'Schwierigkeit ändern';
+      difficultySelect.addEventListener('change', async () => {
+        await fetch(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ difficulty: parseInt(difficultySelect.value) })
+        });
+        await loadAllData();
+        renderTasks();
+      });
+      const urgencySelect = document.createElement('select');
+      for (let i = 0; i <= 4; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i === 0 ? 'Nicht dringend' : `D${i}`;
+        if (task.urgency == i) opt.selected = true;
+        urgencySelect.appendChild(opt);
+      }
+      urgencySelect.style.marginLeft = '0.5em';
+      urgencySelect.title = 'Dringlichkeit ändern';
+      urgencySelect.addEventListener('change', async () => {
+        await fetch(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urgency: parseInt(urgencySelect.value) })
+        });
+        await loadAllData();
+        renderTasks();
+      });
+      // Insert after the title
+      li.querySelector('span').appendChild(difficultySelect);
+      li.querySelector('span').appendChild(urgencySelect);
       list.appendChild(li);
     });
     // Show done tasks from archive if filter is 'done' or 'all'
@@ -199,19 +243,17 @@ function renderTasks() {
       doneTasks.forEach((task, idx) => {
         const li = document.createElement("li");
         li.classList.add("done");
-        let info = `${task.title} (S${task.difficulty} / D${task.urgency})`;
-        // Add due date and countdown for archive too
+        // Title on top line
+        let info = `<div style='font-weight:bold;font-size:1.08em;'>${task.title}</div>`;
+        // Details below: S/D, due date, finished date, rating, exp
+        let details = `S${task.difficulty} / D${task.urgency}`;
         if (task.dueDate) {
           const due = new Date(task.dueDate);
-          const now = new Date();
-          const diffDays = Math.ceil((due - now) / (1000*3600*24));
-          let countdown = '';
-          if (!isNaN(diffDays)) {
-            if (diffDays > 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ffb347;'>${diffDays} Tage übrig</span>)`;
-            else if (diffDays === 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ffb347;'>Heute fällig!</span>)`;
-            else countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ff4d4d;'>Überfällig!</span>)`;
-          }
-          info += countdown;
+          details += ` | Fällig: ${due.toLocaleDateString()}`;
+        }
+        if (task.completedAt) {
+          const finished = new Date(task.completedAt);
+          details += ` | Abgeschlossen am: ${finished.toLocaleDateString()} ${finished.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
         }
         // Show rating if present (always show 5 stars, filled or empty)
         let ratingStars = '';
@@ -219,8 +261,8 @@ function renderTasks() {
         ratingStars = `<span style='color:#FFD700;'>${'★'.repeat(ratingValue)}${'☆'.repeat(5-ratingValue)}</span>`;
         // Calculate earned EXP (base + bonus)
         let expEarned = getExpForTask(task) + (ratingValue * 2);
-        info += ` | Bewertung: ${ratingStars} <span style='color:#7ed957;font-size:0.95em;'>(+${expEarned} EXP)</span>`;
-        li.innerHTML = `<span>${info}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
+        details += ` | Bewertung: ${ratingStars} <span style='color:#7ed957;font-size:0.95em;'>(+${expEarned} EXP)</span>`;
+        li.innerHTML = `<span>${info}<div style='font-size:0.98em;margin-top:0.2em;'>${details}</div></span><div class="task-actions"><span>Abgeschlossen</span></div>`;
         list.appendChild(li);
       });
     }
@@ -254,7 +296,7 @@ function renderRewards() {
   if (!box) return;
   const stats = getPlayerStats(currentPlayer);
   const level = getLevel(stats.exp||0);
-  let html = '<h4>Belohnungen</h4><ul style="padding-left:0;list-style:none;">';
+  let html = '<h4 style="display:flex;align-items:center;justify-content:space-between;">Belohnungen <button id="toggle-rewards" style="margin-left:1em;font-size:1em;padding:0.2em 0.7em;cursor:pointer;background:#232526;color:#ffb347;border:1px solid #444;border-radius:6px;">–</button></h4><div id="rewards-content"><ul style="padding-left:0;list-style:none;">';
   rewards.forEach(r => {
     const claimed = (stats.claimedRewards||[]).includes(r.level);
     if (level >= r.level) {
@@ -269,13 +311,22 @@ function renderRewards() {
       html += `<li class="reward-locked" style="margin-bottom:1rem;opacity:0.5;filter:grayscale(1);">🔒 ${r.desc} <br><span style="font-size:0.95em;">Ab Level ${r.level}</span></li>`;
     }
   });
-  html += '</ul>';
+  html += '</ul></div>';
   box.innerHTML = html;
-  box.querySelectorAll('.claim-reward').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await claimReward(parseInt(btn.dataset.level));
-    });
-  });
+  // Toggle logic
+  const toggleBtn = document.getElementById('toggle-rewards');
+  const contentDiv = document.getElementById('rewards-content');
+  if (toggleBtn && contentDiv) {
+    toggleBtn.onclick = () => {
+      if (contentDiv.style.display === 'none') {
+        contentDiv.style.display = '';
+        toggleBtn.textContent = '–';
+      } else {
+        contentDiv.style.display = 'none';
+        toggleBtn.textContent = '+';
+      }
+    };
+  }
 }
 
 async function claimReward(level) {
@@ -579,4 +630,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const style = document.createElement('style');
   style.innerHTML = `.done { color: #888 !important; text-decoration: none !important; }`;
   document.head.appendChild(style);
+
+  // Make the main/middle box wider
+  const style2 = document.createElement('style');
+  style2.innerHTML = `
+    main, section, #task-list {
+      max-width: 900px !important;
+      width: 90vw !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+  `;
+  document.head.appendChild(style2);
 });

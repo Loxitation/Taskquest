@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "title": "sdf",
+    "difficulty": 3,
+    "urgency": 2,
+    "dueDate": null,
+    "player": "Leon",
+    "status": "open",
+    "added": "2025-07-31T23:29:18.947Z",
+    "id": 1754004558949,
+    "confirmedBy": null
+  },
+  {
+    "title": "Serverschrank reparieren bla blie blubb",
+    "difficulty": 3,
+    "urgency": 0,
+    "dueDate": null,
+    "player": "Leon",
+    "status": "open",
+    "added": "2025-07-31T23:35:08.223Z",
+    "id": 1754004908233,
+    "confirmedBy": null
+  }
+]
