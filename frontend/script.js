@@ -103,6 +103,7 @@ function buildScale(containerId, maxValue) {
 
 function renderTasks() {
   if (!Array.isArray(tasks)) tasks = [];
+  if (!Array.isArray(archive)) archive = [];
   const list = document.getElementById("task-list");
   list.innerHTML = "";
   const playersToShow = [currentPlayer, getOtherPlayer()];
