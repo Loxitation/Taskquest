@@ -17,15 +17,24 @@ const ARCHIVE_FILE = './backend/archive.json';
 const PLAYER_STATS_FILE = './backend/playerStats.json';
 
 // Helper
+function ensureFileExists(file, defaultContent = []) {
+  if (!fs.existsSync(file)) {
+    fs.writeFileSync(file, JSON.stringify(defaultContent, null, 2), 'utf8');
+  }
+}
+
 function readJSON(file) {
+  ensureFileExists(file, []);
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return Array.isArray(data) ? data : [];
   } catch {
-    return Array.isArray(file) ? [] : {};
+    return [];
   }
 }
 
 function writeJSON(file, data) {
+  ensureFileExists(file, []);
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
 }
 
