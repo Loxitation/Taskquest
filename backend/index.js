@@ -90,6 +90,7 @@ app.patch('/api/tasks/:id', (req, res) => {
 app.post('/api/confirm/:id', (req, res) => {
   const taskId = parseInt(req.params.id);
   const player = req.body.player;
+  const rating = typeof req.body.rating === 'number' ? req.body.rating : parseInt(req.body.rating);
   const tasks = readJSON(TASKS_FILE);
   const index = tasks.findIndex(t => t.id === taskId);
 
@@ -98,7 +99,8 @@ app.post('/api/confirm/:id', (req, res) => {
       ...tasks[index],
       confirmedBy: player,
       completedAt: new Date(),
-      status: 'done'
+      status: 'done',
+      rating: rating // Save the rating in the archive
     };
     const archived = readJSON(ARCHIVE_FILE);
     archived.push(completed);

@@ -151,9 +151,34 @@ function renderTasks() {
       `;
       const actions = li.querySelector(".task-actions");
       if (task.status === "open" && task.player === currentPlayer) {
-        actions.innerHTML = `<button class="submit-task">Abschließen</button><button class="delete-task">🗑️</button>`;
+        actions.innerHTML = `<button class="submit-task">Abschließen</button><input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}" style="margin-left:0.5em;"><button class="delete-task">🗑️</button>`;
         actions.querySelector(".submit-task").addEventListener("click", () => submitTask(task));
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
+        const dateInput = actions.querySelector(".edit-due-date");
+        let lastDueDate = task.dueDate ? new Date(task.dueDate) : null;
+        dateInput.addEventListener("change", async () => {
+          let newDueDate = new Date(dateInput.value);
+          if (isNaN(newDueDate.getTime())) {
+            alert("Ungültiges Datum.");
+            dateInput.value = lastDueDate ? lastDueDate.toISOString().slice(0,10) : '';
+            return;
+          }
+          if (lastDueDate && newDueDate > lastDueDate) {
+            // Penalty for extending
+            let stats = getPlayerStats(currentPlayer);
+            stats.exp = Math.max(0, (stats.exp || 0) - 10);
+            await savePlayerStats(currentPlayer, stats.exp, stats.claimedRewards || []);
+            alert("Fälligkeitsdatum verlängert. -10 EXP als kleine Strafe.");
+          }
+          // Update task on backend
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dueDate: newDueDate.toISOString().slice(0,10) })
+          });
+          await loadAllData();
+          renderTasks();
+        });
       } else if (task.status === "submitted" && task.approver === currentPlayer) {
         actions.innerHTML = `<button class="approve-task">Bestätigen</button><button class="reject-task">Ablehnen</button>`;
         actions.querySelector(".approve-task").addEventListener("click", () => approveTask(task));
@@ -188,6 +213,13 @@ function renderTasks() {
           }
           info += countdown;
         }
+        // Show rating if present (always show 5 stars, filled or empty)
+        let ratingStars = '';
+        let ratingValue = typeof task.rating === 'number' ? task.rating : 0;
+        ratingStars = `<span style='color:#FFD700;'>${'★'.repeat(ratingValue)}${'☆'.repeat(5-ratingValue)}</span>`;
+        // Calculate earned EXP (base + bonus)
+        let expEarned = getExpForTask(task) + (ratingValue * 2);
+        info += ` | Bewertung: ${ratingStars} <span style='color:#7ed957;font-size:0.95em;'>(+${expEarned} EXP)</span>`;
         li.innerHTML = `<span>${info}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
         list.appendChild(li);
       });
@@ -303,13 +335,78 @@ async function saveTasksToBackend() {
   renderTasks();
 }
 
-// Approve a task and update player stats
+// Helper to show a star rating modal and return a Promise with the rating
+function showStarRatingModal() {
+  return new Promise((resolve) => {
+    // Create modal
+    let modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+    let box = document.createElement('div');
+    box.style.background = '#232526';
+    box.style.padding = '2em 2em 1em 2em';
+    box.style.borderRadius = '12px';
+    box.style.textAlign = 'center';
+    box.innerHTML = '<h3>Wie viele Sterne für die Ausführung?</h3>';
+    let stars = [];
+    let starsDiv = document.createElement('div');
+    starsDiv.style.fontSize = '2.2em';
+    starsDiv.style.margin = '0.5em 0 1em 0';
+    for (let i = 1; i <= 5; i++) {
+      let star = document.createElement('span');
+      star.textContent = '★';
+      star.style.cursor = 'pointer';
+      star.style.color = '#bbb';
+      star.addEventListener('mouseenter', () => {
+        stars.forEach((s, idx) => s.style.color = idx < i ? '#FFD700' : '#bbb');
+      });
+      star.addEventListener('mouseleave', () => {
+        stars.forEach((s, idx) => s.style.color = s.selected ? '#FFD700' : '#bbb');
+      });
+      star.addEventListener('click', () => {
+        stars.forEach((s, idx) => {
+          s.selected = idx < i;
+          s.style.color = s.selected ? '#FFD700' : '#bbb';
+        });
+        setTimeout(() => {
+          document.body.removeChild(modal);
+          resolve(i);
+        }, 200);
+      });
+      stars.push(star);
+      starsDiv.appendChild(star);
+    }
+    box.appendChild(starsDiv);
+    let cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Abbrechen';
+    cancelBtn.style.marginTop = '1em';
+    cancelBtn.onclick = () => {
+      document.body.removeChild(modal);
+      resolve(null);
+    };
+    box.appendChild(cancelBtn);
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+  });
+}
+
 async function approveTask(task) {
+  // Show star rating modal
+  let rating = await showStarRatingModal();
+  if (!rating) return;
   // Mark as done and update player stats only if task is actually moved
   const response = await fetch(`/api/confirm/${task.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ player: currentPlayer })
+    body: JSON.stringify({ player: currentPlayer, rating })
   });
   const result = await response.json();
   await loadAllData();
@@ -319,7 +416,9 @@ async function approveTask(task) {
   if (!stillInTasks && nowInArchive) {
     const exp = getExpForTask(nowInArchive);
     let stats = getPlayerStats(nowInArchive.player);
-    stats.exp = (stats.exp || 0) + exp;
+    // Add bonus XP for rating
+    let bonus = (nowInArchive.rating || rating) * 2;
+    stats.exp = (stats.exp || 0) + exp + bonus;
     await savePlayerStats(nowInArchive.player, stats.exp, stats.claimedRewards || []);
   }
   await loadAllData();
@@ -473,4 +572,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderTasks();
     });
   }
+
+  // Remove line-through from .done tasks (just grayed out)
+  // You may have a CSS rule like .done { color: #888; text-decoration: line-through; }
+  // Remove or override text-decoration
+  const style = document.createElement('style');
+  style.innerHTML = `.done { color: #888 !important; text-decoration: none !important; }`;
+  document.head.appendChild(style);
 });

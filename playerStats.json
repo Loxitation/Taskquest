@@ -1,7 +1,12 @@
 [
   {
     "player": "Leon",
-    "exp": 400,
+    "exp": 330,
+    "claimedRewards": []
+  },
+  {
+    "player": "Daniel",
+    "exp": 0,
     "claimedRewards": []
   }
 ]

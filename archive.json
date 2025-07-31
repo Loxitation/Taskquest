@@ -1,17 +1,18 @@
 [
   {
-    "title": "zrdz",
-    "difficulty": 4,
-    "urgency": 3,
-    "dueDate": null,
+    "title": "Serverschrank aufräumen",
+    "difficulty": 2,
+    "urgency": 2,
+    "dueDate": "2025-08-04",
     "player": "Leon",
     "status": "done",
-    "added": "2025-07-31T18:23:16.507Z",
-    "id": 1753986196515,
+    "added": "2025-07-31T23:21:08.831Z",
+    "id": 1754004068834,
     "confirmedBy": "Daniel",
-    "commentary": "sdf",
-    "completionTime": 345,
-    "completedAt": "2025-07-31T18:23:26.549Z",
-    "approver": "Daniel"
+    "commentary": "guckst du whatsapp Foto",
+    "completionTime": 270,
+    "completedAt": "2025-07-31T23:23:00.632Z",
+    "approver": "Daniel",
+    "rating": 5
   }
 ]
