@@ -346,20 +346,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderTasks();
 
   // No due date button logic
+  let noDueDate = false;
   const dueDateInput = document.getElementById("due-date");
   const noDueDateBtn = document.getElementById("no-due-date");
-  let noDueDate = false;
   if (noDueDateBtn) {
     noDueDateBtn.addEventListener("click", () => {
       noDueDate = !noDueDate;
       if (noDueDate) {
-        dueDateInput.value = "";
-        dueDateInput.disabled = true;
+        if (dueDateInput) {
+          dueDateInput.value = "";
+          dueDateInput.disabled = true;
+        }
         noDueDateBtn.style.background = "#ffb347";
         noDueDateBtn.style.color = "#232526";
         noDueDateBtn.textContent = "Fälligkeitsdatum aktivieren";
       } else {
-        dueDateInput.disabled = false;
+        if (dueDateInput) dueDateInput.disabled = false;
         noDueDateBtn.style.background = "#232526";
         noDueDateBtn.style.color = "#ffb347";
         noDueDateBtn.textContent = "Kein Fälligkeitsdatum nötig";
@@ -384,50 +386,53 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  document.getElementById("add-task").addEventListener("click", async () => {
-    const title = document.getElementById("title").value.trim();
-    const difficulty = parseInt(document.querySelector("#difficulty-scale .selected")?.textContent);
-    let urgency = 0;
-    const urgencySelected = document.querySelector("#urgency-scale .selected");
-    if (urgencySelected) {
-      if (!urgencySelected.classList.contains("not-urgent")) urgency = parseInt(urgencySelected.textContent);
-    }
-    let dueDate = dueDateInput.value;
-    if (noDueDate) dueDate = null;
-    if (!title || !difficulty || (!urgencySelected) || (!dueDate && !noDueDate)) {
-      alert("Bitte Titel, Schwierigkeit, Dringlichkeit und ggf. Fälligkeitsdatum angeben.");
-      return;
-    }
-    // Enforce due date: max days in future = 2 + (5-urgency)*2 (urgency 0: max 21 days)
-    if (!noDueDate) {
-      let maxDays = 2 + (5 - urgency) * 2;
-      if (urgency === 0) maxDays = 21;
-      const today = new Date();
-      const due = new Date(dueDate);
-      const diffDays = Math.ceil((due - today) / (1000*3600*24));
-      if (diffDays < 0) {
-        alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
+  const addTaskBtn = document.getElementById("add-task");
+  if (addTaskBtn) {
+    addTaskBtn.addEventListener("click", async () => {
+      const title = document.getElementById("title").value.trim();
+      const difficulty = parseInt(document.querySelector("#difficulty-scale .selected")?.textContent);
+      let urgency = 0;
+      const urgencySelected = document.querySelector("#urgency-scale .selected");
+      if (urgencySelected) {
+        if (!urgencySelected.classList.contains("not-urgent")) urgency = parseInt(urgencySelected.textContent);
+      }
+      let dueDate = dueDateInput ? dueDateInput.value : "";
+      if (noDueDate) dueDate = null;
+      if (!title || !difficulty || (!urgencySelected) || (!dueDate && !noDueDate)) {
+        alert("Bitte Titel, Schwierigkeit, Dringlichkeit und ggf. Fälligkeitsdatum angeben.");
         return;
       }
-      if (diffDays > maxDays) {
-        alert(`Bei Dringlichkeit ${urgency === 0 ? 'Nicht dringend' : urgency} darf das Fälligkeitsdatum maximal ${maxDays} Tage in der Zukunft liegen.`);
-        return;
+      // Enforce due date: max days in future = 2 + (5-urgency)*2 (urgency 0: max 21 days)
+      if (!noDueDate) {
+        let maxDays = 2 + (5 - urgency) * 2;
+        if (urgency === 0) maxDays = 21;
+        const today = new Date();
+        const due = new Date(dueDate);
+        const diffDays = Math.ceil((due - today) / (1000*3600*24));
+        if (diffDays < 0) {
+          alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
+          return;
+        }
+        if (diffDays > maxDays) {
+          alert(`Bei Dringlichkeit ${urgency === 0 ? 'Nicht dringend' : urgency} darf das Fälligkeitsdatum maximal ${maxDays} Tage in der Zukunft liegen.`);
+          return;
+        }
       }
-    }
-    await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, difficulty, urgency, dueDate, player: currentPlayer, status: "open", added: new Date().toISOString() })
+      await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, difficulty, urgency, dueDate, player: currentPlayer, status: "open", added: new Date().toISOString() })
+      });
+      await loadAllData();
+      document.getElementById("title").value = "";
+      dueDateInput.value = "";
+      dueDateInput.disabled = false;
+      noDueDate = false;
+      noDueDateBtn.style.background = "#232526";
+      noDueDateBtn.style.color = "#ffb347";
+      noDueDateBtn.textContent = "Kein Fälligkeitsdatum nötig";
+      document.querySelectorAll(".scale button").forEach(b => b.classList.remove("selected"));
+      renderTasks();
     });
-    await loadAllData();
-    document.getElementById("title").value = "";
-    dueDateInput.value = "";
-    dueDateInput.disabled = false;
-    noDueDate = false;
-    noDueDateBtn.style.background = "#232526";
-    noDueDateBtn.style.color = "#ffb347";
-    noDueDateBtn.textContent = "Kein Fälligkeitsdatum nötig";
-    document.querySelectorAll(".scale button").forEach(b => b.classList.remove("selected"));
-    renderTasks();
-  });
+  }
 });
