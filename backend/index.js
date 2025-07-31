@@ -12,9 +12,9 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // JSON-Dateien
-const TASKS_FILE = './backend/tasks.json';
-const ARCHIVE_FILE = './backend/archive.json';
-const PLAYER_STATS_FILE = './backend/playerStats.json';
+const TASKS_FILE = 'tasks.json';
+const ARCHIVE_FILE = 'archive.json';
+const PLAYER_STATS_FILE = 'playerStats.json';
 
 // Helper
 function ensureFileExists(file, defaultContent = []) {
