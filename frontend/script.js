@@ -6,14 +6,14 @@ let playerStats = [];
 let currentFilter = "all"; // all, open, submitted, done
 
 const rewards = [
-  { level: 2, desc: "🧃 1h Wunschaktivität (Zocken, Binge watchen, doom scrollen etc)" },
-  { level: 4, desc: "🧹 'Ich helf dir beim nächsten Projekt'-Joker" },
-  { level: 6, desc: "🛠️ Kleinwerkzeug aus Fernost (Aliexpress etc.)" },
-  { level: 9, desc: "🧩 1 Spiel nach deiner Wahl (max. 30 €)" },
-  { level: 12, desc: "🍔 Du wirst bekocht oder darfst liefern lassen (max. 40€)" },
-  { level: 15, desc: "🎁 Projektbudget: 50 € für Material deiner Wahl" },
-  { level: 18, desc: "🛌 1 Abend voll nichts tun – Projektpause mit zocken oder quatschen" },
-  { level: 20, desc: "🧠 Du delegierst eine Aufgabe komplett an den anderen" }
+  { level: 5, desc: "🧃 1h Wunschaktivität (Zocken, Binge watchen, doom scrollen etc)" },
+  { level: 10, desc: "🧹 'Ich helf dir beim nächsten Projekt'-Joker" },
+  { level: 18, desc: "🛠️ Kleinwerkzeug aus Fernost (Aliexpress etc.)" },
+  { level: 28, desc: "🧩 1 Spiel nach deiner Wahl (max. 30 €)" },
+  { level: 40, desc: "🍔 Du wirst bekocht oder darfst liefern lassen (max. 40€)" },
+  { level: 55, desc: "🎁 Projektbudget: 50 € für Material deiner Wahl" },
+  { level: 70, desc: "🛌 1 Abend voll nichts tun – Projektpause mit zocken oder quatschen" },
+  { level: 90, desc: "🧠 Du delegierst eine Aufgabe komplett an den anderen" }
 ];
 
 async function loadAllData() {
@@ -127,6 +127,15 @@ function renderTasks() {
       const li = document.createElement("li");
       if (task.status === "done") li.classList.add("done");
       let info = `${task.title} (S${task.difficulty} / D${task.urgency})`;
+      // Add due date and countdown
+      if (task.dueDate) {
+        const due = new Date(task.dueDate);
+        const now = new Date();
+        const msLeft = due - now;
+        const daysLeft = Math.ceil(msLeft / (1000*3600*24));
+        let countdown = daysLeft > 0 ? `${daysLeft} Tag${daysLeft === 1 ? '' : 'e'} übrig` : (daysLeft === 0 ? 'Heute fällig!' : 'Überfällig!');
+        info += `<br><b>Fällig:</b> ${due.toLocaleDateString()} <span style='color:${daysLeft < 0 ? '#ff4d4d' : daysLeft === 0 ? '#ffb347' : '#7ed957'}'>(${countdown})</span>`;
+      }
       if (task.status === "submitted" && task.approver === currentPlayer) {
         info += `<br><b>Kommentar:</b> ${task.commentary || "-"}`;
         info += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
@@ -161,6 +170,10 @@ function renderTasks() {
         const li = document.createElement("li");
         li.classList.add("done");
         let info = `${task.title} (S${task.difficulty} / D${task.urgency})`;
+        if (task.dueDate) {
+          const due = new Date(task.dueDate);
+          info += `<br><b>Fällig:</b> ${due.toLocaleDateString()}`;
+        }
         li.innerHTML = `<span>${info}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
         list.appendChild(li);
       });
@@ -414,26 +427,4 @@ document.addEventListener("DOMContentLoaded", async () => {
           alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
           return;
         }
-        if (diffDays > maxDays) {
-          alert(`Bei Dringlichkeit ${urgency === 0 ? 'Nicht dringend' : urgency} darf das Fälligkeitsdatum maximal ${maxDays} Tage in der Zukunft liegen.`);
-          return;
-        }
-      }
-      await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, difficulty, urgency, dueDate, player: currentPlayer, status: "open", added: new Date().toISOString() })
-      });
-      await loadAllData();
-      document.getElementById("title").value = "";
-      dueDateInput.value = "";
-      dueDateInput.disabled = false;
-      noDueDate = false;
-      noDueDateBtn.style.background = "#232526";
-      noDueDateBtn.style.color = "#ffb347";
-      noDueDateBtn.textContent = "Kein Fälligkeitsdatum nötig";
-      document.querySelectorAll(".scale button").forEach(b => b.classList.remove("selected"));
-      renderTasks();
-    });
-  }
-});
+        if
