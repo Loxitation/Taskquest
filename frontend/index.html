@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>TaskQuest</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="player-select-bar">
+    <label for="player-select">Spieler:</label>
+    <select id="player-select">
+      <option value="Leon">Leon</option>
+      <option value="Daniel">Daniel</option>
+    </select>
+    <span id="current-player-info" style="margin-left: 1rem;">
+      Aktueller Spieler: <b>Leon</b>
+    </span>
+    <button id="reset-app" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;margin-left:auto;">Reset</button>
+  </div>
+
+  <h1>🧙‍♂️ TaskQuest</h1>
+
+  <section>
+    <h2>📝 Neue Aufgabe</h2>
+    <input type="text" id="title" placeholder="Titel der Aufgabe" />
+
+    <label>Schwierigkeit:</label>
+    <div class="scale" id="difficulty-scale"></div>
+
+    <label>Dringlichkeit:</label>
+    <div class="scale" id="urgency-scale"></div>
+
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+      <label for="due-date">Fällig bis:</label>
+      <input type="date" id="due-date" style="margin-bottom:1rem;" />
+      <button id="no-due-date" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;">Kein Fälligkeitsdatum nötig</button>
+    </div>
+    <button id="add-task">Hinzufügen</button>
+  </section>
+
+  <aside id="exp-explanation">
+    <h3>Wie werden EXP berechnet?</h3>
+    <table>
+      <tr><th>Faktor</th><th>Wert</th></tr>
+      <tr><td>Basis</td><td>10 × Schwierigkeit</td></tr>
+      <tr><td>Dringlichkeit</td><td>+ 5 × Dringlichkeit</td></tr>
+      <tr><td>Zeitaufwand</td><td>+ 1 EXP pro Minute</td></tr>
+      <tr><td>Bonus</td><td>+ 20 EXP, wenn vor Fälligkeitsdatum erledigt</td></tr>
+      <tr><td>Strafe</td><td>EXP werden exponentiell reduziert, wenn überfällig (siehe unten)</td></tr>
+    </table>
+    <b>Beispiel:</b><br>
+    Schwierigkeit: 3, Dringlichkeit: 2, Zeit: 45min, rechtzeitig<br>
+    <b>EXP = 10×3 + 5×2 + 45 + 20 = 105</b><br>
+    <br>
+    <b>Strafregel:</b> Je mehr Tage überfällig, desto weniger EXP. Ab 21 Tagen: -10 EXP.<br>
+    <span style="color:#7ed957;">Je dringender, desto kürzer darf das Fälligkeitsdatum in der Zukunft liegen!</span>
+    <div id="rewards-box" style="margin-top:2.5rem;"></div>
+  </aside>
+  <style>
+    #exp-explanation {
+      position: absolute;
+      top: 2rem;
+      right: 2rem;
+      width: 400px;
+      background: #18191c;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      color: #b2ffb2;
+      font-size: 1rem;
+      line-height: 1.5;
+      z-index: 10;
+    }
+    @media (max-width: 1000px) {
+      #exp-explanation {
+        position: static;
+        width: auto;
+        margin: 2rem 0 0 0;
+      }
+    }
+    section {
+      position: relative;
+      z-index: 1;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 2px 6px;
+    }
+    th {
+      color: #7ed957;
+    }
+  </style>
+
+  <section>
+    <h2>🧾 Aufgaben</h2>
+    <ul id="task-list"></ul>
+  </section>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
