@@ -53,7 +53,7 @@ function getExpForTask(task) {
 }
 
 function getPlayerStats(player) {
-  let entry = playerStats.find(s => s.player === player);
+  let entry = Array.isArray(playerStats) ? playerStats.find(s => s.player === player) : undefined;
   if (!entry) entry = { player, exp: 0, claimedRewards: [] };
   return entry;
 }
