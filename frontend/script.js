@@ -430,20 +430,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         alert("Bitte Titel, Schwierigkeit, Dringlichkeit und ggf. Fälligkeitsdatum angeben.");
         return;
       }
-      // Enforce due date: max days in future = 2 + (5-urgency)*2 (urgency 0: max 21 days)
+      // Enforce due date: max days in future = 2 + (5-urgency)*2 (urgency 0: no limit)
       if (!noDueDate) {
-        let maxDays = 2 + (5 - urgency) * 2;
-        if (urgency === 0) maxDays = 21;
-        const today = new Date();
-        const due = new Date(dueDate);
-        const diffDays = Math.ceil((due - today) / (1000*3600*24));
-        if (diffDays < 0) {
-          alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
-          return;
-        }
-        if (diffDays > maxDays) {
-          alert(`Bei Dringlichkeit ${urgency === 0 ? 'Nicht dringend' : urgency} darf das Fälligkeitsdatum maximal ${maxDays} Tage in der Zukunft liegen.`);
-          return;
+        if (urgency !== 0) {
+          let maxDays = 2 + (5 - urgency) * 2;
+          const today = new Date();
+          const due = new Date(dueDate);
+          const diffDays = Math.ceil((due - today) / (1000*3600*24));
+          if (diffDays < 0) {
+            alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
+            return;
+          }
+          if (diffDays > maxDays) {
+            alert(`Bei Dringlichkeit ${urgency} darf das Fälligkeitsdatum maximal ${maxDays} Tage in der Zukunft liegen.`);
+            return;
+          }
+        } else {
+          // Only check that due date is in the future
+          const today = new Date();
+          const due = new Date(dueDate);
+          const diffDays = Math.ceil((due - today) / (1000*3600*24));
+          if (diffDays < 0) {
+            alert("Das Fälligkeitsdatum muss in der Zukunft liegen.");
+            return;
+          }
         }
       }
       await fetch('/api/tasks', {
