@@ -74,8 +74,41 @@ function updatePlayerInfo() {
   const stats = getPlayerStats(currentPlayer);
   const level = getLevel(stats.exp||0);
   const rank = getRank(level);
+  const prevLevel = parseInt(localStorage.getItem("taskquest_prev_level") || level);
   document.getElementById("current-player-info").innerHTML = `Aktueller Spieler: <b>${currentPlayer}</b> | Level: <b>${level}</b> <span style="margin-left:0.5em;">${rank}</span> | EXP: <b>${stats.exp||0}</b>`;
+  // EXP progress bar
+  let nextLevelExp = Math.ceil(100 * (Math.pow(2, level) - 1));
+  let prevLevelExp = level > 1 ? Math.ceil(100 * (Math.pow(2, level-1) - 1)) : 0;
+  let expInLevel = (stats.exp||0) - prevLevelExp;
+  let expForLevel = nextLevelExp - prevLevelExp;
+  let percent = Math.min(100, Math.round((expInLevel/expForLevel)*100));
+  let bar = document.getElementById("exp-progress-bar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "exp-progress-bar";
+    document.getElementById("current-player-info").appendChild(bar);
+  }
+  bar.innerHTML = `<div class='exp-bar-outer'><div class='exp-bar-inner' style='width:${percent}%;'></div></div><div class='exp-bar-label'>${expInLevel} / ${expForLevel} EXP bis Level ${level+1}</div>`;
   renderRewards();
+  // Confetti effect on level up
+  if (level > prevLevel) {
+    showConfetti();
+  }
+  localStorage.setItem("taskquest_prev_level", level);
+}
+
+function showConfetti() {
+  // Simple confetti effect
+  for (let i = 0; i < 80; i++) {
+    let conf = document.createElement("div");
+    conf.className = "confetti";
+    conf.style.left = Math.random()*100 + "vw";
+    conf.style.top = "-10px";
+    conf.style.background = `hsl(${Math.random()*360},90%,60%)`;
+    conf.style.animationDelay = (Math.random()*2) + "s";
+    document.body.appendChild(conf);
+    setTimeout(() => conf.remove(), 3500);
+  }
 }
 
 function buildScale(containerId, maxValue) {
@@ -526,13 +559,70 @@ function deleteTask(task) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const playerSelect = document.getElementById("player-select");
-  if (playerSelect) {
-    playerSelect.value = currentPlayer;
-    playerSelect.addEventListener("change", async () => {
-      currentPlayer = playerSelect.value;
-      await loadAllData();
+  // Show user selection popup on first visit
+  let savedPlayer = localStorage.getItem("taskquest_player");
+  if (!savedPlayer || !players.includes(savedPlayer)) {
+    let modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100vw";
+    modal.style.height = "100vh";
+    modal.style.background = "rgba(0,0,0,0.6)";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.style.zIndex = "9999";
+    let box = document.createElement("div");
+    box.style.background = "#232526";
+    box.style.padding = "2em 2em 1em 2em";
+    box.style.borderRadius = "12px";
+    box.style.textAlign = "center";
+    box.innerHTML = `<h2 style='color:#ffb347;'>Wer bist du?</h2>`;
+    players.forEach(p => {
+      let btn = document.createElement("button");
+      btn.textContent = p;
+      btn.style.margin = "1em";
+      btn.style.background = "#232526";
+      btn.style.color = "#ffb347";
+      btn.style.border = "1.5px solid #ffb347";
+      btn.style.borderRadius = "8px";
+      btn.style.padding = "0.7em 2em";
+      btn.style.fontSize = "1.2em";
+      btn.style.cursor = "pointer";
+      btn.onclick = () => {
+        currentPlayer = p;
+        localStorage.setItem("taskquest_player", p);
+        document.body.removeChild(modal);
+        afterPlayerSelected();
+      };
+      box.appendChild(btn);
+    });
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+    return;
+  } else {
+    currentPlayer = savedPlayer;
+    afterPlayerSelected();
+  }
+
+  function afterPlayerSelected() {
+    const playerSelect = document.getElementById("player-select");
+    if (playerSelect) {
+      playerSelect.value = currentPlayer;
+      playerSelect.addEventListener("change", async () => {
+        currentPlayer = playerSelect.value;
+        localStorage.setItem("taskquest_player", currentPlayer);
+        await loadAllData();
+        updatePlayerInfo();
+        renderFilterBar();
+        renderTasks();
+      });
+    }
+    loadAllData().then(() => {
       updatePlayerInfo();
+      buildScale("difficulty-scale", 4);
+      buildScale("urgency-scale", 4);
       renderFilterBar();
       renderTasks();
     });
