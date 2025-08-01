@@ -193,48 +193,76 @@ function renderTasks() {
         actions.innerHTML = `<button class="delete-task">🗑️</button>`;
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
       }
-      // Add controls to change difficulty and urgency for every task
-      const difficultySelect = document.createElement('select');
-      for (let i = 1; i <= 4; i++) {
-        let opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = `S${i}`;
-        if (task.difficulty == i) opt.selected = true;
-        difficultySelect.appendChild(opt);
-      }
-      difficultySelect.style.marginLeft = '0.5em';
-      difficultySelect.title = 'Schwierigkeit ändern';
-      difficultySelect.addEventListener('change', async () => {
-        await fetch(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ difficulty: parseInt(difficultySelect.value) })
+      // Only show difficulty/urgency dropdowns if not submitted/done
+      if (task.status === "open" || (task.status !== "submitted" && task.status !== "done")) {
+        // Add controls to change difficulty and urgency for every task
+        const difficultySelect = document.createElement('select');
+        for (let i = 1; i <= 4; i++) {
+          let opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = `S${i}`;
+          if (task.difficulty == i) opt.selected = true;
+          difficultySelect.appendChild(opt);
+        }
+        difficultySelect.style.marginLeft = '0.5em';
+        difficultySelect.title = 'Schwierigkeit ändern';
+        difficultySelect.addEventListener('change', async () => {
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ difficulty: parseInt(difficultySelect.value) })
+          });
+          await loadAllData();
+          renderTasks();
         });
-        await loadAllData();
-        renderTasks();
-      });
-      const urgencySelect = document.createElement('select');
-      for (let i = 0; i <= 4; i++) {
-        let opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i === 0 ? 'Nicht dringend' : `D${i}`;
-        if (task.urgency == i) opt.selected = true;
-        urgencySelect.appendChild(opt);
-      }
-      urgencySelect.style.marginLeft = '0.5em';
-      urgencySelect.title = 'Dringlichkeit ändern';
-      urgencySelect.addEventListener('change', async () => {
-        await fetch(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urgency: parseInt(urgencySelect.value) })
+        const urgencySelect = document.createElement('select');
+        for (let i = 0; i <= 4; i++) {
+          let opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = i === 0 ? 'Nicht dringend' : `D${i}`;
+          if (task.urgency == i) opt.selected = true;
+          urgencySelect.appendChild(opt);
+        }
+        urgencySelect.style.marginLeft = '0.5em';
+        urgencySelect.title = 'Dringlichkeit ändern';
+        urgencySelect.addEventListener('change', async () => {
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urgency: parseInt(urgencySelect.value) })
+          });
+          await loadAllData();
+          renderTasks();
         });
-        await loadAllData();
-        renderTasks();
-      });
-      // Insert after the title
-      li.querySelector('span').appendChild(difficultySelect);
-      li.querySelector('span').appendChild(urgencySelect);
+        // Insert after the title
+        li.querySelector('span').appendChild(difficultySelect);
+        li.querySelector('span').appendChild(urgencySelect);
+      }
+      // Add time tracking input for open tasks
+      if (task.status === "open") {
+        const timeDiv = document.createElement('div');
+        timeDiv.style.marginTop = '0.3em';
+        let currentTime = parseInt(task.completionTime) || 0;
+        timeDiv.innerHTML = `<label style='margin-right:0.5em;'>Zeit gearbeitet (min):</label><input type='number' min='1' style='width:4em;' value='' class='add-time-input'><button class='add-time-btn' style='margin-left:0.5em;'>Hinzufügen</button> <span class='current-time' style='margin-left:1em;color:#7ed957;'>Gesamt: ${currentTime} min</span>`;
+        const input = timeDiv.querySelector('.add-time-input');
+        const btn = timeDiv.querySelector('.add-time-btn');
+        btn.addEventListener('click', async () => {
+          let addTime = parseInt(input.value);
+          if (isNaN(addTime) || addTime < 1) {
+            alert('Bitte gültige Minutenanzahl eingeben.');
+            return;
+          }
+          let newTime = currentTime + addTime;
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completionTime: newTime })
+          });
+          await loadAllData();
+          renderTasks();
+        });
+        li.querySelector('span').appendChild(timeDiv);
+      }
       list.appendChild(li);
     });
     // Show done tasks from archive if filter is 'done' or 'all'
@@ -245,7 +273,7 @@ function renderTasks() {
         li.classList.add("done");
         // Title on top line
         let info = `<div style='font-weight:bold;font-size:1.08em;'>${task.title}</div>`;
-        // Details below: S/D, due date, finished date, rating, exp
+        // Details below: S/D, due date, finished date, rating, exp, time taken
         let details = `S${task.difficulty} / D${task.urgency}`;
         if (task.dueDate) {
           const due = new Date(task.dueDate);
@@ -254,6 +282,9 @@ function renderTasks() {
         if (task.completedAt) {
           const finished = new Date(task.completedAt);
           details += ` | Abgeschlossen am: ${finished.toLocaleDateString()} ${finished.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+        if (task.completionTime) {
+          details += ` | Zeit: ${task.completionTime} min`;
         }
         // Show rating if present (always show 5 stars, filled or empty)
         let ratingStars = '';
@@ -296,7 +327,7 @@ function renderRewards() {
   if (!box) return;
   const stats = getPlayerStats(currentPlayer);
   const level = getLevel(stats.exp||0);
-  let html = '<h4 style="display:flex;align-items:center;justify-content:space-between;">Belohnungen <button id="toggle-rewards" style="margin-left:1em;font-size:1em;padding:0.2em 0.7em;cursor:pointer;background:#232526;color:#ffb347;border:1px solid #444;border-radius:6px;">–</button></h4><div id="rewards-content"><ul style="padding-left:0;list-style:none;">';
+  let html = '<h4>Belohnungen</h4><ul style="padding-left:0;list-style:none;">';
   rewards.forEach(r => {
     const claimed = (stats.claimedRewards||[]).includes(r.level);
     if (level >= r.level) {
@@ -311,22 +342,13 @@ function renderRewards() {
       html += `<li class="reward-locked" style="margin-bottom:1rem;opacity:0.5;filter:grayscale(1);">🔒 ${r.desc} <br><span style="font-size:0.95em;">Ab Level ${r.level}</span></li>`;
     }
   });
-  html += '</ul></div>';
+  html += '</ul>';
   box.innerHTML = html;
-  // Toggle logic
-  const toggleBtn = document.getElementById('toggle-rewards');
-  const contentDiv = document.getElementById('rewards-content');
-  if (toggleBtn && contentDiv) {
-    toggleBtn.onclick = () => {
-      if (contentDiv.style.display === 'none') {
-        contentDiv.style.display = '';
-        toggleBtn.textContent = '–';
-      } else {
-        contentDiv.style.display = 'none';
-        toggleBtn.textContent = '+';
-      }
-    };
-  }
+  box.querySelectorAll('.claim-reward').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await claimReward(parseInt(btn.dataset.level));
+    });
+  });
 }
 
 async function claimReward(level) {
@@ -623,23 +645,4 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderTasks();
     });
   }
-
-  // Remove line-through from .done tasks (just grayed out)
-  // You may have a CSS rule like .done { color: #888; text-decoration: line-through; }
-  // Remove or override text-decoration
-  const style = document.createElement('style');
-  style.innerHTML = `.done { color: #888 !important; text-decoration: none !important; }`;
-  document.head.appendChild(style);
-
-  // Make the main/middle box wider
-  const style2 = document.createElement('style');
-  style2.innerHTML = `
-    main, section, #task-list {
-      max-width: 900px !important;
-      width: 90vw !important;
-      margin-left: auto !important;
-      margin-right: auto !important;
-    }
-  `;
-  document.head.appendChild(style2);
 });

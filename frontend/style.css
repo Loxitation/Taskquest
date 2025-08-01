@@ -105,6 +105,73 @@ section {
 #exp-explanation b, #exp-explanation span {
   color: #ffb347;
 }
+#exp-explanation-content {
+  transition: all 0.2s;
+}
+
+.done {
+  color: #888 !important;
+  text-decoration: none !important;
+}
+main, section, #task-list {
+  max-width: 900px !important;
+  width: 90vw !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+.add-time-input {
+  border: 1.5px solid #ffb347;
+  border-radius: 6px;
+  padding: 0.3em 0.7em;
+  background: #232526;
+  color: #ffb347;
+  font-size: 1em;
+  margin-right: 0.3em;
+  outline: none;
+  width: 7em;
+}
+.add-time-input:focus {
+  border-color: #7ed957;
+  background: #18191c;
+  color: #7ed957;
+}
+.add-time-input::-webkit-outer-spin-button,
+.add-time-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.add-time-input[type=number] {
+  -moz-appearance: textfield;
+}
+.add-time-btn {
+  background: #232526;
+  color: #ffb347;
+  border: 1.5px solid #ffb347;
+  border-radius: 6px;
+  padding: 0.3em 1em;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s, color 0.2s;
+}
+.add-time-btn:hover {
+  background: #ffb347;
+  color: #232526;
+}
+select[title^='Schwierigkeit'], select[title^='Dringlichkeit'] {
+  background: #232526;
+  color: #ffb347;
+  border: 1.5px solid #ffb347;
+  border-radius: 6px;
+  padding: 0.3em 0.7em;
+  font-size: 1em;
+  margin-right: 0.3em;
+  cursor: pointer;
+  outline: none;
+}
+select[title^='Schwierigkeit']:focus, select[title^='Dringlichkeit']:focus {
+  border-color: #7ed957;
+  color: #7ed957;
+}
 
 @media (max-width: 1100px) {
   .main-flex {
@@ -116,11 +183,13 @@ section {
     max-width: 100%;
     min-width: 0;
     margin: 2rem 0 0 0;
+    flex: 1 1 100%;
   }
   section {
     max-width: 100%;
     min-width: 0;
     width: 100%;
+    flex: 1 1 100%;
   }
 }
 
@@ -212,6 +281,10 @@ button#add-task:hover {
 
 #task-list {
   list-style: none;
+  max-width: 900px !important;
+  width: 90vw !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   padding: 0;
 }
 
@@ -229,7 +302,6 @@ button#add-task:hover {
 }
 
 #task-list li.done {
-  text-decoration: line-through;
   color: #888;
   background: #18191c;
   opacity: 0.7;
