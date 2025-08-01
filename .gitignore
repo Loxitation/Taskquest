@@ -1,6 +1,16 @@
 # Node.js dependencies
 node_modules/
 
+# json data files
+# These files are generated and should not be tracked
+# They contain user-specific data and should be ignored.
+backend/archive.json
+backend/playerStats.json
+backend/tasks.json
+archive.json
+playerStats.json
+tasks.json
+
 # Logs
 *.log
 npm-debug.log*
