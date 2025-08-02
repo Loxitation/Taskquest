@@ -3,9 +3,11 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
-const PORT = 3578;
+const PORT = 3579;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -15,6 +17,14 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 const TASKS_FILE = 'tasks.json';
 const ARCHIVE_FILE = 'archive.json';
 const PLAYER_STATS_FILE = 'playerStats.json';
+
+// --- SOCKET.IO SETUP ---
+const server = http.createServer(app);
+const io = new Server(server);
+
+function emitDataChanged() {
+  io.emit('dataChanged');
+}
 
 // Helper
 function ensureFileExists(file, defaultContent = []) {
@@ -55,6 +65,7 @@ app.post('/api/tasks', (req, res) => {
   };
   tasks.push(newTask);
   writeJSON(TASKS_FILE, tasks);
+  emitDataChanged();
   res.json({ success: true, task: newTask });
 });
 
@@ -67,6 +78,7 @@ app.post('/api/mark-done/:id', (req, res) => {
     task.note = req.body.note || "";
     task.hours = req.body.hours || 0;
     writeJSON(TASKS_FILE, tasks);
+    emitDataChanged();
     res.json({ success: true });
   } else {
     res.status(403).json({ error: 'Task nicht gefunden oder unberechtigt' });
@@ -83,6 +95,7 @@ app.patch('/api/tasks/:id', (req, res) => {
   }
   tasks[index] = { ...tasks[index], ...req.body };
   writeJSON(TASKS_FILE, tasks);
+  emitDataChanged();
   res.json({ success: true, task: tasks[index] });
 });
 
@@ -91,6 +104,7 @@ app.post('/api/confirm/:id', (req, res) => {
   const taskId = parseInt(req.params.id);
   const player = req.body.player;
   const rating = typeof req.body.rating === 'number' ? req.body.rating : parseInt(req.body.rating);
+  const answerCommentary = req.body.answerCommentary || "";
   const tasks = readJSON(TASKS_FILE);
   const index = tasks.findIndex(t => t.id === taskId);
 
@@ -100,13 +114,15 @@ app.post('/api/confirm/:id', (req, res) => {
       confirmedBy: player,
       completedAt: new Date(),
       status: 'done',
-      rating: rating // Save the rating in the archive
+      rating: rating, // Save the rating in the archive
+      answerCommentary // Save the answer commentary
     };
     const archived = readJSON(ARCHIVE_FILE);
     archived.push(completed);
     writeJSON(ARCHIVE_FILE, archived);
     tasks.splice(index, 1);
     writeJSON(TASKS_FILE, tasks);
+    emitDataChanged();
     res.json({ success: true });
   } else {
     res.status(403).json({ error: 'Task nicht vorhanden oder nicht zur Freigabe bereit.' });
@@ -120,18 +136,21 @@ app.delete('/api/tasks/:id', (req, res) => {
   const initialLength = tasks.length;
   tasks = tasks.filter(t => t.id !== taskId);
   writeJSON(TASKS_FILE, tasks);
+  emitDataChanged();
   res.json({ success: tasks.length < initialLength });
 });
 
 // POST: Clear all tasks
 app.post('/api/tasks/clear', (req, res) => {
   writeJSON(TASKS_FILE, []);
+  emitDataChanged();
   res.json({ success: true });
 });
 
 // POST: Clear all archive
 app.post('/api/archive/clear', (req, res) => {
   writeJSON(ARCHIVE_FILE, []);
+  emitDataChanged();
   res.json({ success: true });
 });
 
@@ -161,6 +180,7 @@ app.post('/api/player-stats', (req, res) => {
   if (typeof exp === 'number') entry.exp = exp;
   if (Array.isArray(claimedRewards)) entry.claimedRewards = claimedRewards;
   writeJSON(PLAYER_STATS_FILE, stats);
+  emitDataChanged();
   res.json({ success: true, stats });
 });
 
@@ -169,4 +189,5 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-app.listen(PORT, () => console.log(`Server läuft auf http://localhost:${PORT}`));
+// Start server with socket.io
+server.listen(PORT, () => console.log(`Server läuft auf http://localhost:${PORT}`));

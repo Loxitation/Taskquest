@@ -20,47 +20,71 @@
 
   <h1>🧙‍♂️ TaskQuest</h1>
 
-  <section>
-    <h2>📝 Neue Aufgabe</h2>
-    <input type="text" id="title" placeholder="Titel der Aufgabe" />
+  <div class="main-layout">
+    <aside class="left-col">
+      <div id="scoreboard-box" class="scoreboard-box"></div>
+    </aside>
+    <main class="center-col">
+      <div id="add-task-box" class="add-task-box">
+        <h2>📝 Neue Aufgabe</h2>
+        <div class="add-task-row">
+          <label for="title">Titel:</label>
+          <input type="text" id="title" placeholder="Titel der Aufgabe" />
+        </div>
+        <div class="add-task-row">
+          <label for="difficulty-scale">Schwierigkeit:</label>
+          <div class="scale" id="difficulty-scale"></div>
+        </div>
+        <div class="add-task-row">
+          <label for="urgency-scale">Dringlichkeit:</label>
+          <div class="scale" id="urgency-scale"></div>
+        </div>
+        <div class="add-task-row" style="flex-direction:row;align-items:center;gap:0.7rem;">
+          <label for="due-date">Fällig bis:</label>
+          <input type="date" id="due-date" style="margin-bottom:0.3rem;" />
+          <button id="no-due-date" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;">Kein Fälligkeitsdatum nötig</button>
+        </div>
+        <div class="add-task-row">
+          <button id="add-task">Hinzufügen</button>
+        </div>
+      </div>
+      <section id="task-section">
+        <h2>🧾 Aufgaben</h2>
+        <ul id="task-list"></ul>
+      </section>
+    </main>
+    <aside class="right-col">
+      <div id="exp-rewards-box" class="exp-rewards-box">
+        <button id="toggle-exp-rewards" class="toggle-box-btn">Infocenter einblenden/ausblenden</button>
+        <div id="exp-rewards-content">
+          <div id="exp-explanation-box" class="exp-explanation-box">
+            <h3 style="display:flex;align-items:center;justify-content:space-between;">
+              EXP Berechnung
+              
+            </h3>
+            <div id="exp-explanation-content">
+              <table>
+                <tr><th>Faktor</th><th>Wert</th></tr>
+                <tr><td>Basis</td><td>10 × Schwierigkeit</td></tr>
+                <tr><td>Dringlichkeit</td><td>+ 5 × Dringlichkeit</td></tr>
+                <tr><td>Zeitaufwand</td><td>+ 1 EXP pro Minute</td></tr>
+                <tr><td>Bonus</td><td>+ 20 EXP, wenn vor Fälligkeitsdatum erledigt</td></tr>
+                <tr><td>Strafe</td><td>EXP werden exponentiell reduziert, wenn überfällig (siehe unten)</td></tr>
+              </table>
+              <b>Beispiel:</b><br>
+              Schwierigkeit: 3, Dringlichkeit: 2, Zeit: 45min, rechtzeitig<br>
+              <b>EXP = 10×3 + 5×2 + 45 + 20 = 105</b><br>
+              <br>
+              <b>Strafregel:</b> Je mehr Tage überfällig, desto weniger EXP. Ab 21 Tagen: -10 EXP.<br>
+              <span style="color:#7ed957;">Je dringender, desto kürzer darf das Fälligkeitsdatum in der Zukunft liegen!</span>
+            </div>
+          </div>
+          <div id="rewards-box" class="rewards-box"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
 
-    <label>Schwierigkeit:</label>
-    <div class="scale" id="difficulty-scale"></div>
-
-    <label>Dringlichkeit:</label>
-    <div class="scale" id="urgency-scale"></div>
-
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-      <label for="due-date">Fällig bis:</label>
-      <input type="date" id="due-date" style="margin-bottom:1rem;" />
-      <button id="no-due-date" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;">Kein Fälligkeitsdatum nötig</button>
-    </div>
-    <button id="add-task">Hinzufügen</button>
-  </section>
-
-  <aside id="exp-explanation">
-    <h3 style="display:flex;align-items:center;justify-content:space-between;">
-      Info's und Belohnungen
-      <button id="toggle-exp-explanation" style="margin-left:1em;font-size:1em;padding:0.2em 0.7em;cursor:pointer;background:#232526;color:#ffb347;border:1px solid #444;border-radius:6px;">–</button>
-    </h3>
-    <div id="exp-explanation-content">
-      <table>
-        <tr><th>Faktor</th><th>Wert</th></tr>
-        <tr><td>Basis</td><td>10 × Schwierigkeit</td></tr>
-        <tr><td>Dringlichkeit</td><td>+ 5 × Dringlichkeit</td></tr>
-        <tr><td>Zeitaufwand</td><td>+ 1 EXP pro Minute</td></tr>
-        <tr><td>Bonus</td><td>+ 20 EXP, wenn vor Fälligkeitsdatum erledigt</td></tr>
-        <tr><td>Strafe</td><td>EXP werden exponentiell reduziert, wenn überfällig (siehe unten)</td></tr>
-      </table>
-      <b>Beispiel:</b><br>
-      Schwierigkeit: 3, Dringlichkeit: 2, Zeit: 45min, rechtzeitig<br>
-      <b>EXP = 10×3 + 5×2 + 45 + 20 = 105</b><br>
-      <br>
-      <b>Strafregel:</b> Je mehr Tage überfällig, desto weniger EXP. Ab 21 Tagen: -10 EXP.<br>
-      <span style="color:#7ed957;">Je dringender, desto kürzer darf das Fälligkeitsdatum in der Zukunft liegen!</span>
-      <div id="rewards-box" style="margin-top:2.5rem;"></div>
-    </div>
-  </aside>
   <style>
     #exp-explanation {
       position: absolute;
@@ -99,14 +123,44 @@
     th {
       color: #7ed957;
     }
+    .main-layout {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    .left-col {
+      flex: 0 0 250px;
+    }
+    .center-col {
+      flex: 1;
+    }
+    .right-col {
+      flex: 0 0 300px;
+    }
+    .scoreboard-box, .exp-explanation-box, .rewards-box {
+      background: #232526;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      color: #ffb347;
+    }
+    .toggle-box-btn {
+      background: #18191c;
+      color: #ffb347;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 0.4rem 1.2rem;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
   </style>
 
-  <section>
-    <h2>🧾 Aufgaben</h2>
-    <ul id="task-list"></ul>
-  </section>
-
-  <script type="module" src="script.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
   <script>
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('toggle-exp-explanation');
@@ -120,6 +174,20 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleBtn.textContent = '+';
     }
   });
+
+  const toggleExpRewardsBtn = document.getElementById('toggle-exp-rewards');
+  const expRewardsContent = document.getElementById('exp-rewards-content');
+  toggleExpRewardsBtn.addEventListener('click', () => {
+    if (expRewardsContent.style.display === 'none' || expRewardsContent.style.display === '') {
+      expRewardsContent.style.display = 'block';
+      toggleExpRewardsBtn.textContent = 'Infocenter ausblenden';
+    } else {
+      expRewardsContent.style.display = 'none';
+      toggleExpRewardsBtn.textContent = 'Infocenter einblenden';
+    }
+  });
+  // Set initial state
+  document.getElementById('toggle-exp-rewards').textContent = 'Infocenter ausblenden';
 });
 </script>
 </body>

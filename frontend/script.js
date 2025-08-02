@@ -74,9 +74,12 @@ function updatePlayerInfo() {
   const stats = getPlayerStats(currentPlayer);
   const level = getLevel(stats.exp||0);
   const rank = getRank(level);
-  const prevLevel = parseInt(localStorage.getItem("taskquest_prev_level") || level);
+  // Only trigger confetti if level up and not just on data update
+  let prevLevel = parseInt(localStorage.getItem("taskquest_prev_level"));
+  if (isNaN(prevLevel)) prevLevel = level;
+  let confettiShownFor = localStorage.getItem("taskquest_confetti_shown_for") || "";
   document.getElementById("current-player-info").innerHTML = `Aktueller Spieler: <b>${currentPlayer}</b> | Level: <b>${level}</b> <span style="margin-left:0.5em;">${rank}</span> | EXP: <b>${stats.exp||0}</b>`;
-  // EXP progress bar
+  // EXP progress bar (always visible, styled)
   let nextLevelExp = Math.ceil(100 * (Math.pow(2, level) - 1));
   let prevLevelExp = level > 1 ? Math.ceil(100 * (Math.pow(2, level-1) - 1)) : 0;
   let expInLevel = (stats.exp||0) - prevLevelExp;
@@ -89,10 +92,13 @@ function updatePlayerInfo() {
     document.getElementById("current-player-info").appendChild(bar);
   }
   bar.innerHTML = `<div class='exp-bar-outer'><div class='exp-bar-inner' style='width:${percent}%;'></div></div><div class='exp-bar-label'>${expInLevel} / ${expForLevel} EXP bis Level ${level+1}</div>`;
+  bar.style.display = "block";
   renderRewards();
-  // Confetti effect on level up
-  if (level > prevLevel) {
+  renderScoreboard(); // Add scoreboard update here
+  // Confetti effect only if level up and not already shown for this level in this session
+  if (level > prevLevel && confettiShownFor !== `${currentPlayer}_${level}`) {
     showConfetti();
+    localStorage.setItem("taskquest_confetti_shown_for", `${currentPlayer}_${level}`);
   }
   localStorage.setItem("taskquest_prev_level", level);
 }
@@ -144,12 +150,7 @@ function renderTasks() {
   playersToShow.forEach(player => {
     // Section header
     const header = document.createElement("li");
-    header.style.background = "#18191c";
-    header.style.color = "#ffb347";
-    header.style.fontWeight = "bold";
-    header.style.fontSize = "1.1rem";
-    header.style.borderBottom = "1px solid #333";
-    header.style.marginTop = "1.2rem";
+    header.className = "task-section-header";
     header.textContent = player === currentPlayer ? "Deine Aufgaben" : `Aufgaben von ${player}`;
     list.appendChild(header);
     // Filtered tasks for this player (only by creator)
@@ -161,7 +162,7 @@ function renderTasks() {
       const li = document.createElement("li");
       if (task.status === "done") li.classList.add("done");
       // Title on top line
-      let info = `<div style='font-weight:bold;font-size:1.08em;'>${task.title}</div>`;
+      let info = `<div class='task-title'>${task.title}</div>`;
       // Details below
       let details = `S${task.difficulty} / D${task.urgency}`;
       if (task.dueDate) {
@@ -170,9 +171,9 @@ function renderTasks() {
         const diffDays = Math.ceil((due - now) / (1000*3600*24));
         let countdown = '';
         if (!isNaN(diffDays)) {
-          if (diffDays > 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ffb347;'>${diffDays} Tage übrig</span>)`;
-          else if (diffDays === 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ffb347;'>Heute fällig!</span>)`;
-          else countdown = ` | Fällig: ${due.toLocaleDateString()} (<span style='color:#ff4d4d;'>Überfällig!</span>)`;
+          if (diffDays > 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span class='due-soon'>${diffDays} Tage übrig</span>)`;
+          else if (diffDays === 0) countdown = ` | Fällig: ${due.toLocaleDateString()} (<span class='due-today'>Heute fällig!</span>)`;
+          else countdown = ` | Fällig: ${due.toLocaleDateString()} (<span class='due-overdue'>Überfällig!</span>)`;
         }
         details += countdown;
       }
@@ -181,12 +182,12 @@ function renderTasks() {
         details += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
       }
       li.innerHTML = `
-        <span>${info}<div style='font-size:0.98em;margin-top:0.2em;'>${details}</div></span>
+        <span>${info}<div class='task-details'>${details}</div></span>
         <div class="task-actions"></div>
       `;
       const actions = li.querySelector(".task-actions");
       if (task.status === "open" && task.player === currentPlayer) {
-        actions.innerHTML = `<button class="submit-task">Abschließen</button><input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}" style="margin-left:0.5em;"><button class="delete-task">🗑️</button>`;
+        actions.innerHTML = `<button class="submit-task">Abschließen</button><input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}"><button class="delete-task">🗑️</button>`;
         actions.querySelector(".submit-task").addEventListener("click", () => submitTask(task));
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
         const dateInput = actions.querySelector(".edit-due-date");
@@ -221,7 +222,7 @@ function renderTasks() {
       } else if (task.status === "submitted" && task.player === currentPlayer) {
         actions.innerHTML = `<span>Warte auf Bestätigung...</span>`;
       } else if (task.status === "done") {
-        actions.innerHTML = `<span>Abgeschlossen</span>`;
+        actions.innerHTML = `<span>Status: Abgeschlossen</span>`;
       } else if (task.player === currentPlayer) {
         actions.innerHTML = `<button class="delete-task">🗑️</button>`;
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
@@ -237,7 +238,7 @@ function renderTasks() {
           if (task.difficulty == i) opt.selected = true;
           difficultySelect.appendChild(opt);
         }
-        difficultySelect.style.marginLeft = '0.5em';
+        difficultySelect.className = 'difficulty-select';
         difficultySelect.title = 'Schwierigkeit ändern';
         difficultySelect.addEventListener('change', async () => {
           await fetch(`/api/tasks/${task.id}`, {
@@ -256,7 +257,7 @@ function renderTasks() {
           if (task.urgency == i) opt.selected = true;
           urgencySelect.appendChild(opt);
         }
-        urgencySelect.style.marginLeft = '0.5em';
+        urgencySelect.className = 'urgency-select';
         urgencySelect.title = 'Dringlichkeit ändern';
         urgencySelect.addEventListener('change', async () => {
           await fetch(`/api/tasks/${task.id}`, {
@@ -274,9 +275,9 @@ function renderTasks() {
       // Add time tracking input for open tasks
       if (task.status === "open") {
         const timeDiv = document.createElement('div');
-        timeDiv.style.marginTop = '0.3em';
+        timeDiv.className = 'time-track-row';
         let currentTime = parseInt(task.completionTime) || 0;
-        timeDiv.innerHTML = `<label style='margin-right:0.5em;'>Zeit gearbeitet (min):</label><input type='number' min='1' style='width:4em;' value='' class='add-time-input'><button class='add-time-btn' style='margin-left:0.5em;'>Hinzufügen</button> <span class='current-time' style='margin-left:1em;color:#7ed957;'>Gesamt: ${currentTime} min</span>`;
+        timeDiv.innerHTML = `<label class='time-track-label'>Zeit gearbeitet (min):</label><input type='number' min='1' class='add-time-input' value=''><button class='add-time-btn'>Hinzufügen</button> <span class='current-time'>Gesamt: ${currentTime} min</span>`;
         const input = timeDiv.querySelector('.add-time-input');
         const btn = timeDiv.querySelector('.add-time-btn');
         btn.addEventListener('click', async () => {
@@ -305,7 +306,7 @@ function renderTasks() {
         const li = document.createElement("li");
         li.classList.add("done");
         // Title on top line
-        let info = `<div style='font-weight:bold;font-size:1.08em;'>${task.title}</div>`;
+        let info = `<div class='task-title'>${task.title}</div>`;
         // Details below: S/D, due date, finished date, rating, exp, time taken
         let details = `S${task.difficulty} / D${task.urgency}`;
         if (task.dueDate) {
@@ -322,11 +323,19 @@ function renderTasks() {
         // Show rating if present (always show 5 stars, filled or empty)
         let ratingStars = '';
         let ratingValue = typeof task.rating === 'number' ? task.rating : 0;
-        ratingStars = `<span style='color:#FFD700;'>${'★'.repeat(ratingValue)}${'☆'.repeat(5-ratingValue)}</span>`;
+        ratingStars = `<span class='task-rating'>${'★'.repeat(ratingValue)}${'☆'.repeat(5-ratingValue)}</span>`;
         // Calculate earned EXP (base + bonus)
         let expEarned = getExpForTask(task) + (ratingValue * 2);
-        details += ` | Bewertung: ${ratingStars} <span style='color:#7ed957;font-size:0.95em;'>(+${expEarned} EXP)</span>`;
-        li.innerHTML = `<span>${info}<div style='font-size:0.98em;margin-top:0.2em;'>${details}</div></span><div class="task-actions"><span>Abgeschlossen</span></div>`;
+        details += ` | Bewertung: ${ratingStars} <span class='exp-earned'>(+${expEarned} EXP)</span>`;
+        // Commentary and answer
+        let commentaryBlock = '';
+        if (task.commentary) {
+          commentaryBlock += `<div class='commentary-block'><b>Kommentar:</b><div class='commentary-text'>${task.commentary}</div></div>`;
+        }
+        if (task.answerCommentary) {
+          commentaryBlock += `<div class='commentary-block'><b>Antwort:</b><div class='commentary-text'>${task.answerCommentary}</div></div>`;
+        }
+        li.innerHTML = `<span>${info}<div class='task-details'>${details}</div>${commentaryBlock}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
         list.appendChild(li);
       });
     }
@@ -470,7 +479,7 @@ function showStarRatingModal() {
       let star = document.createElement('span');
       star.textContent = '★';
       star.style.cursor = 'pointer';
-      star.style.color = '#bbb';
+      star.style.color = '#FFD700'; // Always gold
       star.addEventListener('mouseenter', () => {
         stars.forEach((s, idx) => s.style.color = idx < i ? '#FFD700' : '#bbb');
       });
@@ -508,11 +517,13 @@ async function approveTask(task) {
   // Show star rating modal
   let rating = await showStarRatingModal();
   if (!rating) return;
+  // Prompt for answer commentary
+  let answerCommentary = prompt("Antwort-Kommentar (optional):", task.answerCommentary || "");
   // Mark as done and update player stats only if task is actually moved
   const response = await fetch(`/api/confirm/${task.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ player: currentPlayer, rating })
+    body: JSON.stringify({ player: currentPlayer, rating, answerCommentary })
   });
   const result = await response.json();
   await loadAllData();
@@ -550,12 +561,32 @@ function rejectTask(task) {
 }
 
 function deleteTask(task) {
+  if (!confirm(`Willst du die Aufgabe wirklich löschen?\nTitel: ${task.title}`)) return;
+  // Extra confirmation
+  const confirmText = prompt("Gib 'delete' ein, um die Aufgabe unwiderruflich zu löschen.");
+  if (confirmText !== "delete") {
+    alert("Löschen abgebrochen. Du musst 'delete' eingeben.");
+    return;
+  }
   fetch(`/api/tasks/${task.id}`, {
     method: 'DELETE'
   }).then(async () => {
     await loadAllData();
     renderTasks();
   });
+}
+
+// --- SOCKET.IO REAL-TIME UPDATES ---
+let socket;
+function setupSocket() {
+  if (window.io) {
+    socket = io();
+    socket.on('dataChanged', async () => {
+      await loadAllData();
+      renderTasks();
+      updatePlayerInfo();
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -625,6 +656,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildScale("urgency-scale", 4);
       renderFilterBar();
       renderTasks();
+      renderScoreboard(); // Ensure scoreboard is rendered on load
     });
   }
 
@@ -634,6 +666,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   buildScale("urgency-scale", 4);
   renderFilterBar();
   renderTasks();
+  renderScoreboard(); // Ensure scoreboard is rendered on load
+
+  // --- EXP & REWARDS COLLAPSE/EXPAND LOGIC ---
+  const expRewardsBox = document.getElementById("exp-rewards-box");
+  const expRewardsContent = document.getElementById("exp-rewards-content");
+  const toggleExpRewardsBtn = document.getElementById("toggle-exp-rewards");
+  if (toggleExpRewardsBtn && expRewardsContent) {
+    let expanded = true;
+    toggleExpRewardsBtn.addEventListener("click", () => {
+      expanded = !expanded;
+      expRewardsContent.style.display = expanded ? "block" : "none";
+      toggleExpRewardsBtn.textContent = expanded ? "EXP & Belohnungen ausblenden" : "EXP & Belohnungen anzeigen";
+    });
+    // Start expanded
+    expRewardsContent.style.display = "block";
+    toggleExpRewardsBtn.textContent = "EXP & Belohnungen ausblenden";
+  }
 
   // No due date button logic
   let noDueDate = false;
@@ -663,16 +712,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resetBtn = document.getElementById("reset-app");
   if (resetBtn) {
     resetBtn.addEventListener("click", async () => {
-      if (confirm("Bist du sicher, dass du die App zurücksetzen möchtest? Alle Aufgaben, das Archiv und Punkte werden gelöscht!")) {
-        // Clear backend files using new clear endpoints
-        await fetch('/api/tasks/clear', { method: 'POST' });
-        await fetch('/api/archive/clear', { method: 'POST' });
-        await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Leon', exp: 0, claimedRewards: [] }) });
-        await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Daniel', exp: 0, claimedRewards: [] }) });
-        await loadAllData();
-        renderTasks();
-        location.reload();
+      // Add input prompt for reset confirmation
+      const confirmText = prompt("Gib 'reset' ein, um die App wirklich zurückzusetzen. Alle Aufgaben, das Archiv und Punkte werden gelöscht!");
+      if (confirmText !== "reset") {
+        alert("Zurücksetzen abgebrochen. Du musst 'reset' eingeben.");
+        return;
       }
+      // Clear backend files using new clear endpoints
+      await fetch('/api/tasks/clear', { method: 'POST' });
+      await fetch('/api/archive/clear', { method: 'POST' });
+      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Leon', exp: 0, claimedRewards: [] }) });
+      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Daniel', exp: 0, claimedRewards: [] }) });
+      await loadAllData();
+      renderTasks();
+      location.reload();
     });
   }
 
@@ -735,4 +788,61 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderTasks();
     });
   }
+
+  // Setup socket.io for real-time updates
+  const script = document.createElement('script');
+  script.src = '/socket.io/socket.io.js';
+  script.onload = setupSocket;
+  document.body.appendChild(script);
+
+  // --- Align Schwierigkeit label with difficulty buttons in add-task form ---
+  const diffLabel = document.querySelector("label[for='difficulty-scale']");
+  const diffScale = document.getElementById("difficulty-scale");
+  if (diffLabel && diffScale) {
+    diffLabel.style.display = "inline-block";
+    diffLabel.style.verticalAlign = "middle";
+    diffLabel.style.marginRight = "0.7em";
+    diffScale.style.display = "inline-block";
+    diffScale.style.verticalAlign = "middle";
+  }
 });
+
+function renderScoreboard() {
+  // Ensure scoreboard box exists
+  let box = document.getElementById("scoreboard-box");
+  if (!box) {
+    // Try to insert it to the left sidebar, before exp explanation box if possible
+    const expBox = document.getElementById("exp-explanation-box");
+    box = document.createElement("div");
+    box.id = "scoreboard-box";
+    box.className = "scoreboard-box";
+    if (expBox && expBox.parentNode) {
+      expBox.parentNode.insertBefore(box, expBox);
+    } else {
+      document.body.prepend(box);
+    }
+  }
+  // Calculate stats for both players
+  let html = '<h4>🏆 Scoreboard</h4><ul style="padding-left:0;list-style:none;">';
+  players.forEach(player => {
+    const stats = getPlayerStats(player);
+    const level = getLevel(stats.exp||0);
+    // Sum all completionTime from tasks and archive for this player
+    let totalMinutes = 0;
+    if (Array.isArray(tasks)) {
+      totalMinutes += tasks.filter(t => t.player === player && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
+    }
+    if (Array.isArray(archive)) {
+      totalMinutes += archive.filter(t => t.player === player && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
+    }
+    // Format minutes as hh:mm if over 60
+    let timeStr = totalMinutes < 60 ? `${totalMinutes} min` : `${Math.floor(totalMinutes/60)}h ${totalMinutes%60}min`;
+    html += `<li class="scoreboard-entry${player===currentPlayer?' active-player':''}">
+      <span class="scoreboard-player">${player}</span><br>
+      Level: <b>${level}</b> | EXP: <b>${stats.exp||0}</b><br>
+      Zeit investiert: <b>${timeStr}</b>
+    </li>`;
+  });
+  html += '</ul>';
+  box.innerHTML = html;
+}
