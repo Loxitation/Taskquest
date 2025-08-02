@@ -1,11 +1,13 @@
 [
   {
-    "player": "Leon",
+    "id": "1",
+    "name": "Leon",
     "exp": 0,
     "claimedRewards": []
   },
   {
-    "player": "Daniel",
+    "id": "2",
+    "name": "Daniel",
     "exp": 386,
     "claimedRewards": []
   }

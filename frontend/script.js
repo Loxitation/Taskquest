@@ -1,5 +1,5 @@
-let currentPlayer = "Leon";
-const players = ["Leon", "Daniel"];
+let currentPlayerId = null;
+let players = [];
 let tasks = [];
 let archive = [];
 let playerStats = [];
@@ -17,13 +17,23 @@ const rewards = [
 ];
 
 async function loadAllData() {
-  tasks = await fetch('/api/tasks').then(r => r.json());
-  archive = await fetch('/api/archive').then(r => r.json());
-  playerStats = await fetch('/api/player-stats').then(r => r.json());
+  [tasks, archive, playerStats, players] = await Promise.all([
+    fetch('/api/tasks').then(r => r.json()),
+    fetch('/api/archive').then(r => r.json()),
+    fetch('/api/player-stats').then(r => r.json()),
+    fetch('/api/players').then(r => r.json())
+  ]);
 }
 
-function getOtherPlayer() {
-  return players.find(p => p !== currentPlayer);
+function getPlayerById(id) {
+  return players.find(p => p.id === id);
+}
+function getOtherPlayerId() {
+  if (!currentPlayerId || players.length < 2) return null;
+  return players.find(p => p.id !== currentPlayerId)?.id;
+}
+function getPlayerStatsById(id) {
+  return playerStats.find(s => s.id === id) || { id, name: '', exp: 0, claimedRewards: [] };
 }
 
 function getLevel(exp) {
@@ -53,12 +63,6 @@ function getExpForTask(task) {
   return Math.max(1, exp);
 }
 
-function getPlayerStats(player) {
-  let entry = Array.isArray(playerStats) ? playerStats.find(s => s.player === player) : undefined;
-  if (!entry) entry = { player, exp: 0, claimedRewards: [] };
-  return entry;
-}
-
 function getRank(level) {
   if (level < 3) return "🪑 Faule Sau";
   if (level < 5) return "🍺 Nichtsnutz mit Ambitionen";
@@ -71,14 +75,15 @@ function getRank(level) {
 }
 
 function updatePlayerInfo() {
-  const stats = getPlayerStats(currentPlayer);
+  const stats = getPlayerStatsById(currentPlayerId);
   const level = getLevel(stats.exp||0);
   const rank = getRank(level);
   // Only trigger confetti if level up and not just on data update
   let prevLevel = parseInt(localStorage.getItem("taskquest_prev_level"));
   if (isNaN(prevLevel)) prevLevel = level;
   let confettiShownFor = localStorage.getItem("taskquest_confetti_shown_for") || "";
-  document.getElementById("current-player-info").innerHTML = `Aktueller Spieler: <b>${currentPlayer}</b> | Level: <b>${level}</b> <span style="margin-left:0.5em;">${rank}</span> | EXP: <b>${stats.exp||0}</b>`;
+  const playerName = getPlayerById(currentPlayerId)?.name || '';
+  document.getElementById("current-player-info").innerHTML = `Aktueller Spieler: <b>${playerName}</b> | Level: <b>${level}</b> <span style="margin-left:0.5em;">${rank}</span> | EXP: <b>${stats.exp||0}</b>`;
   // EXP progress bar (always visible, styled)
   let nextLevelExp = Math.ceil(100 * (Math.pow(2, level) - 1));
   let prevLevelExp = level > 1 ? Math.ceil(100 * (Math.pow(2, level-1) - 1)) : 0;
@@ -96,9 +101,9 @@ function updatePlayerInfo() {
   renderRewards();
   renderScoreboard(); // Add scoreboard update here
   // Confetti effect only if level up and not already shown for this level in this session
-  if (level > prevLevel && confettiShownFor !== `${currentPlayer}_${level}`) {
+  if (level > prevLevel && confettiShownFor !== `${currentPlayerId}_${level}`) {
     showConfetti();
-    localStorage.setItem("taskquest_confetti_shown_for", `${currentPlayer}_${level}`);
+    localStorage.setItem("taskquest_confetti_shown_for", `${currentPlayerId}_${level}`);
   }
   localStorage.setItem("taskquest_prev_level", level);
 }
@@ -146,22 +151,24 @@ function renderTasks() {
   if (!Array.isArray(archive)) archive = [];
   const list = document.getElementById("task-list");
   list.innerHTML = "";
-  const playersToShow = [currentPlayer, getOtherPlayer()];
-  playersToShow.forEach((player, idx) => {
+  const playersToShow = [currentPlayerId, getOtherPlayerId()];
+  playersToShow.forEach((playerId, idx) => {
+    if (!playerId) return;
+    const playerName = getPlayerById(playerId)?.name || '';
     // Section header
     const header = document.createElement("li");
-    header.className = "task-section-header" + (player !== currentPlayer ? " opponent-header" : "");
-    header.textContent = player === currentPlayer ? "Deine Aufgaben" : `Aufgaben von ${player}`;
+    header.className = "task-section-header" + (playerId !== currentPlayerId ? " opponent-header" : "");
+    header.textContent = playerId === currentPlayerId ? "Deine Aufgaben" : `Aufgaben von ${playerName}`;
     list.appendChild(header);
     // Filtered tasks for this player (only by creator)
-    let filtered = tasks.filter(t => t.player === player);
+    let filtered = tasks.filter(t => t.player === playerId);
     if (currentFilter === "open") filtered = filtered.filter(t => t.status === "open");
     if (currentFilter === "submitted") filtered = filtered.filter(t => t.status === "submitted");
     if (currentFilter === "done") filtered = [];
     filtered.forEach((task, idx) => {
       const li = document.createElement("li");
       if (task.status === "done") li.classList.add("done");
-      if (player !== currentPlayer) li.classList.add("opponent-task");
+      if (playerId !== currentPlayerId) li.classList.add("opponent-task");
       // Title on top line
       let info = `<div class='task-title'>${task.title}</div>`;
       // Details below
@@ -178,7 +185,7 @@ function renderTasks() {
         }
         details += countdown;
       }
-      if (task.status === "submitted" && task.approver === currentPlayer) {
+      if (task.status === "submitted" && task.approver === currentPlayerId) {
         details += `<br><b>Kommentar:</b> ${task.commentary || "-"}`;
         details += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
       }
@@ -187,7 +194,7 @@ function renderTasks() {
         <div class="task-actions"></div>
       `;
       const actions = li.querySelector(".task-actions");
-      if (task.status === "open" && task.player === currentPlayer) {
+      if (task.status === "open" && task.player === currentPlayerId) {
         actions.innerHTML = `<button class="submit-task">Abschließen</button><input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}"><button class="delete-task">🗑️</button>`;
         actions.querySelector(".submit-task").addEventListener("click", () => submitTask(task));
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
@@ -202,9 +209,9 @@ function renderTasks() {
           }
           if (lastDueDate && newDueDate > lastDueDate) {
             // Penalty for extending
-            let stats = getPlayerStats(currentPlayer);
+            let stats = getPlayerStatsById(currentPlayerId);
             stats.exp = Math.max(0, (stats.exp || 0) - 10);
-            await savePlayerStats(currentPlayer, stats.exp, stats.claimedRewards || []);
+            await savePlayerStats(currentPlayerId, stats.exp, stats.claimedRewards || []);
             alert("Fälligkeitsdatum verlängert. -10 EXP als kleine Strafe.");
           }
           // Update task on backend
@@ -216,15 +223,15 @@ function renderTasks() {
           await loadAllData();
           renderTasks();
         });
-      } else if (task.status === "submitted" && task.approver === currentPlayer) {
+      } else if (task.status === "submitted" && task.approver === currentPlayerId) {
         actions.innerHTML = `<button class="approve-task">Bestätigen</button><button class="reject-task">Ablehnen</button>`;
         actions.querySelector(".approve-task").addEventListener("click", () => approveTask(task));
         actions.querySelector(".reject-task").addEventListener("click", () => rejectTask(task));
-      } else if (task.status === "submitted" && task.player === currentPlayer) {
+      } else if (task.status === "submitted" && task.player === currentPlayerId) {
         actions.innerHTML = `<span>Warte auf Bestätigung...</span>`;
       } else if (task.status === "done") {
         actions.innerHTML = `<span>Status: Abgeschlossen</span>`;
-      } else if (task.player === currentPlayer) {
+      } else if (task.player === currentPlayerId) {
         actions.innerHTML = `<button class="delete-task">🗑️</button>`;
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
       }
@@ -302,7 +309,7 @@ function renderTasks() {
     });
     // Show done tasks from archive if filter is 'done' or 'all'
     if (currentFilter === "done" || currentFilter === "all") {
-      let doneTasks = archive.filter(t => t.player === player);
+      let doneTasks = archive.filter(t => t.player === playerId);
       doneTasks.forEach((task, idx) => {
         const li = document.createElement("li");
         li.classList.add("done");
@@ -368,7 +375,7 @@ function renderFilterBar() {
 function renderRewards() {
   const box = document.getElementById("rewards-box");
   if (!box) return;
-  const stats = getPlayerStats(currentPlayer);
+  const stats = getPlayerStatsById(currentPlayerId);
   const level = getLevel(stats.exp||0);
   let html = '<h4>Belohnungen</h4><ul style="padding-left:0;list-style:none;">';
   rewards.forEach(r => {
@@ -395,22 +402,22 @@ function renderRewards() {
 }
 
 async function claimReward(level) {
-  let stats = getPlayerStats(currentPlayer);
+  let stats = getPlayerStatsById(currentPlayerId);
   if (!stats.claimedRewards) stats.claimedRewards = [];
   if (!stats.claimedRewards.includes(level)) {
     stats.claimedRewards.push(level);
-    await savePlayerStats(currentPlayer, stats.exp, stats.claimedRewards);
+    await savePlayerStats(currentPlayerId, stats.exp, stats.claimedRewards);
     await loadAllData();
     renderRewards();
     updatePlayerInfo();
   }
 }
 
-async function savePlayerStats(player, exp, claimedRewards) {
+async function savePlayerStats(playerId, exp, claimedRewards) {
   await fetch('/api/player-stats', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ player, exp, claimedRewards })
+    body: JSON.stringify({ playerId, exp, claimedRewards })
   });
 }
 
@@ -433,7 +440,7 @@ function submitTask(task) {
       completionTime,
       completedAt: new Date().toISOString(),
       status: "submitted",
-      approver: getOtherPlayer()
+      approver: getOtherPlayerId()
     })
   }).then(async () => {
     await loadAllData();
@@ -524,7 +531,7 @@ async function approveTask(task) {
   const response = await fetch(`/api/confirm/${task.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ player: currentPlayer, rating, answerCommentary })
+    body: JSON.stringify({ player: currentPlayerId, rating, answerCommentary })
   });
   const result = await response.json();
   await loadAllData();
@@ -533,7 +540,7 @@ async function approveTask(task) {
   const nowInArchive = archive.find(t => t.id === task.id);
   if (!stillInTasks && nowInArchive) {
     const exp = getExpForTask(nowInArchive);
-    let stats = getPlayerStats(nowInArchive.player);
+    let stats = getPlayerStatsById(nowInArchive.player);
     // Add bonus XP for rating
     let bonus = (nowInArchive.rating || rating) * 2;
     stats.exp = (stats.exp || 0) + exp + bonus;
@@ -591,9 +598,10 @@ function setupSocket() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Show user selection popup on first visit
-  let savedPlayer = localStorage.getItem("taskquest_player");
-  if (!savedPlayer || !players.includes(savedPlayer)) {
+  await loadAllData();
+  // Player selection popup
+  let savedPlayerId = localStorage.getItem("taskquest_player_id");
+  if (!savedPlayerId || !players.some(p => p.id === savedPlayerId)) {
     let modal = document.createElement("div");
     modal.style.position = "fixed";
     modal.style.top = "0";
@@ -613,7 +621,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     box.innerHTML = `<h2 style='color:#ffb347;'>Wer bist du?</h2>`;
     players.forEach(p => {
       let btn = document.createElement("button");
-      btn.textContent = p;
+      btn.textContent = p.name;
       btn.style.margin = "1em";
       btn.style.background = "#232526";
       btn.style.color = "#ffb347";
@@ -623,8 +631,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.style.fontSize = "1.2em";
       btn.style.cursor = "pointer";
       btn.onclick = () => {
-        currentPlayer = p;
-        localStorage.setItem("taskquest_player", p);
+        currentPlayerId = p.id;
+        localStorage.setItem("taskquest_player_id", p.id);
         document.body.removeChild(modal);
         afterPlayerSelected();
       };
@@ -634,17 +642,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.appendChild(modal);
     return;
   } else {
-    currentPlayer = savedPlayer;
+    currentPlayerId = savedPlayerId;
     afterPlayerSelected();
   }
 
   function afterPlayerSelected() {
     const playerSelect = document.getElementById("player-select");
     if (playerSelect) {
-      playerSelect.value = currentPlayer;
+      playerSelect.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      playerSelect.value = currentPlayerId;
       playerSelect.addEventListener("change", async () => {
-        currentPlayer = playerSelect.value;
-        localStorage.setItem("taskquest_player", currentPlayer);
+        currentPlayerId = playerSelect.value;
+        localStorage.setItem("taskquest_player_id", currentPlayerId);
         await loadAllData();
         updatePlayerInfo();
         renderFilterBar();
@@ -657,7 +666,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildScale("urgency-scale", 4);
       renderFilterBar();
       renderTasks();
-      renderScoreboard(); // Ensure scoreboard is rendered on load
+      renderScoreboard();
     });
   }
 
@@ -722,8 +731,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Clear backend files using new clear endpoints
       await fetch('/api/tasks/clear', { method: 'POST' });
       await fetch('/api/archive/clear', { method: 'POST' });
-      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Leon', exp: 0, claimedRewards: [] }) });
-      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: 'Daniel', exp: 0, claimedRewards: [] }) });
+      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ playerId: 'Leon', exp: 0, claimedRewards: [] }) });
+      await fetch('/api/player-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ playerId: 'Daniel', exp: 0, claimedRewards: [] }) });
       await loadAllData();
       renderTasks();
       location.reload();
@@ -775,7 +784,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, difficulty, urgency, dueDate, player: currentPlayer, status: "open", added: new Date().toISOString() })
+        body: JSON.stringify({ title, difficulty, urgency, dueDate, player: currentPlayerId, status: "open", added: new Date().toISOString() })
       });
       await loadAllData();
       document.getElementById("title").value = "";
@@ -823,23 +832,23 @@ function renderScoreboard() {
       document.body.prepend(box);
     }
   }
-  // Calculate stats for both players
+  // Calculate stats for all players
   let html = '<h4>🏆 Scoreboard</h4><ul style="padding-left:0;list-style:none;">';
-  players.forEach(player => {
-    const stats = getPlayerStats(player);
+  players.forEach(p => {
+    const stats = getPlayerStatsById(p.id);
     const level = getLevel(stats.exp||0);
     // Sum all completionTime from tasks and archive for this player
     let totalMinutes = 0;
     if (Array.isArray(tasks)) {
-      totalMinutes += tasks.filter(t => t.player === player && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
+      totalMinutes += tasks.filter(t => t.player === p.id && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
     }
     if (Array.isArray(archive)) {
-      totalMinutes += archive.filter(t => t.player === player && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
+      totalMinutes += archive.filter(t => t.player === p.id && t.completionTime).reduce((sum, t) => sum + parseInt(t.completionTime||0), 0);
     }
     // Format minutes as hh:mm if over 60
     let timeStr = totalMinutes < 60 ? `${totalMinutes} min` : `${Math.floor(totalMinutes/60)}h ${totalMinutes%60}min`;
-    html += `<li class="scoreboard-entry${player===currentPlayer?' active-player':''}">
-      <span class="scoreboard-player">${player}</span><br>
+    html += `<li class="scoreboard-entry${p.id===currentPlayerId?' active-player':''}">
+      <span class="scoreboard-player">${p.name}</span><br>
       Level: <b>${level}</b> | EXP: <b>${stats.exp||0}</b><br>
       Zeit investiert: <b>${timeStr}</b>
     </li>`;

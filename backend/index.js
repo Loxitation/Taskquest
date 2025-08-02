@@ -7,7 +7,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const app = express();
-const PORT = 3579;
+const PORT = 3578;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -160,6 +160,15 @@ app.get('/api/archive', (req, res) => {
   res.json(archive);
 });
 
+// GET all players (id and name)
+app.get('/api/players', (req, res) => {
+  let stats = readJSON(PLAYER_STATS_FILE);
+  if (!Array.isArray(stats)) stats = [];
+  // Return array of { id, name }
+  const players = stats.map(s => ({ id: s.id, name: s.name }));
+  res.json(players);
+});
+
 // GET/POST Player Stats (EXP, rewards, etc.)
 app.get('/api/player-stats', (req, res) => {
   let stats = readJSON(PLAYER_STATS_FILE);
@@ -168,15 +177,16 @@ app.get('/api/player-stats', (req, res) => {
 });
 
 app.post('/api/player-stats', (req, res) => {
-  // expects { player, exp, claimedRewards }
-  const { player, exp, claimedRewards } = req.body;
+  // expects { id, name, exp, claimedRewards }
+  const { id, name, exp, claimedRewards } = req.body;
   let stats = readJSON(PLAYER_STATS_FILE);
   if (!Array.isArray(stats)) stats = [];
-  let entry = stats.find(s => s.player === player);
+  let entry = stats.find(s => s.id === id);
   if (!entry) {
-    entry = { player, exp: 0, claimedRewards: [] };
+    entry = { id, name, exp: 0, claimedRewards: [] };
     stats.push(entry);
   }
+  if (typeof name === 'string') entry.name = name;
   if (typeof exp === 'number') entry.exp = exp;
   if (Array.isArray(claimedRewards)) entry.claimedRewards = claimedRewards;
   writeJSON(PLAYER_STATS_FILE, stats);
