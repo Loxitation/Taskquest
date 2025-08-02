@@ -147,10 +147,10 @@ function renderTasks() {
   const list = document.getElementById("task-list");
   list.innerHTML = "";
   const playersToShow = [currentPlayer, getOtherPlayer()];
-  playersToShow.forEach(player => {
+  playersToShow.forEach((player, idx) => {
     // Section header
     const header = document.createElement("li");
-    header.className = "task-section-header";
+    header.className = "task-section-header" + (player !== currentPlayer ? " opponent-header" : "");
     header.textContent = player === currentPlayer ? "Deine Aufgaben" : `Aufgaben von ${player}`;
     list.appendChild(header);
     // Filtered tasks for this player (only by creator)
@@ -161,6 +161,7 @@ function renderTasks() {
     filtered.forEach((task, idx) => {
       const li = document.createElement("li");
       if (task.status === "done") li.classList.add("done");
+      if (player !== currentPlayer) li.classList.add("opponent-task");
       // Title on top line
       let info = `<div class='task-title'>${task.title}</div>`;
       // Details below
