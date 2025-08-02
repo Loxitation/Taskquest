@@ -109,6 +109,10 @@ app.post('/api/confirm/:id', (req, res) => {
   const index = tasks.findIndex(t => t.id === taskId);
 
   if (index !== -1 && tasks[index].player !== player && tasks[index].status === 'submitted') {
+    // If approver is '__anyone__', update it to the actual approver
+    if (tasks[index].approver === '__anyone__') {
+      tasks[index].approver = player;
+    }
     const completed = {
       ...tasks[index],
       confirmedBy: player,
@@ -181,6 +185,8 @@ app.post('/api/player-stats', (req, res) => {
   const { id, name, exp, claimedRewards } = req.body;
   let stats = readJSON(PLAYER_STATS_FILE);
   if (!Array.isArray(stats)) stats = [];
+  // Remove any entries without an id or name (invalid entries)
+  stats = stats.filter(s => s && s.id && s.name);
   let entry = stats.find(s => s.id === id);
   if (!entry) {
     entry = { id, name, exp: 0, claimedRewards: [] };

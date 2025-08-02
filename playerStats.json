@@ -8,7 +8,20 @@
   {
     "id": "2",
     "name": "Daniel",
-    "exp": 386,
+    "exp": 4555555555556681,
+    "claimedRewards": [
+      5,
+      10,
+      15,
+      20,
+      40,
+      30
+    ]
+  },
+  {
+    "id": "3",
+    "name": "Otto",
+    "exp": 173,
     "claimedRewards": []
   }
 ]

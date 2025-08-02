@@ -100,10 +100,14 @@ function updatePlayerInfo() {
   bar.style.display = "block";
   renderRewards();
   renderScoreboard(); // Add scoreboard update here
-  // Confetti effect only if level up and not already shown for this level in this session
-  if (level > prevLevel && confettiShownFor !== `${currentPlayerId}_${level}`) {
-    showConfetti();
-    localStorage.setItem("taskquest_confetti_shown_for", `${currentPlayerId}_${level}`);
+  // Confetti effect for every level gained (not just one)
+  if (level > prevLevel) {
+    for (let l = prevLevel + 1; l <= level; l++) {
+      if (confettiShownFor !== `${currentPlayerId}_${l}`) {
+        showConfetti();
+        localStorage.setItem("taskquest_confetti_shown_for", `${currentPlayerId}_${l}`);
+      }
+    }
   }
   localStorage.setItem("taskquest_prev_level", level);
 }
@@ -151,10 +155,14 @@ function renderTasks() {
   if (!Array.isArray(archive)) archive = [];
   const list = document.getElementById("task-list");
   list.innerHTML = "";
-  const playersToShow = [currentPlayerId, getOtherPlayerId()];
-  playersToShow.forEach((playerId, idx) => {
-    if (!playerId) return;
-    const playerName = getPlayerById(playerId)?.name || '';
+  // Sort players so current user is first, then others by id
+  const sortedPlayers = [
+    ...players.filter(p => p.id === currentPlayerId),
+    ...players.filter(p => p.id !== currentPlayerId)
+  ];
+  sortedPlayers.forEach((player, idx) => {
+    const playerId = player.id;
+    const playerName = player.name || '';
     // Section header
     const header = document.createElement("li");
     header.className = "task-section-header" + (playerId !== currentPlayerId ? " opponent-header" : "");
@@ -173,6 +181,9 @@ function renderTasks() {
       let info = `<div class='task-title'>${task.title}</div>`;
       // Details below
       let details = `S${task.difficulty} / D${task.urgency}`;
+      if (typeof task.completionTime !== 'undefined') {
+        details += ` | Zeit gearbeitet: ${task.completionTime} min`;
+      }
       if (task.dueDate) {
         const due = new Date(task.dueDate);
         const now = new Date();
@@ -185,8 +196,26 @@ function renderTasks() {
         }
         details += countdown;
       }
+      // Show approver if more than 2 players and approver is set
+      if (players.length > 2 && task.approver) {
+        let approverName = '';
+        if (task.approver === '__anyone__') {
+          // If task is done and confirmedBy is set, show real approver
+          if (task.status === 'done' && task.confirmedBy) {
+            approverName = getPlayerById(task.confirmedBy)?.name || task.confirmedBy;
+          } else {
+            approverName = 'Jeder';
+          }
+        } else {
+          approverName = getPlayerById(task.approver)?.name || task.approver;
+        }
+        details += ` | Prüfer: <b>${approverName}</b>`;
+      }
+      // Always show commentary for submitted tasks
+      if (task.status === "submitted" && task.commentary) {
+        details += `<br><b>Kommentar:</b> ${task.commentary}`;
+      }
       if (task.status === "submitted" && task.approver === currentPlayerId) {
-        details += `<br><b>Kommentar:</b> ${task.commentary || "-"}`;
         details += `<br><b>Zeit:</b> ${task.completionTime ? task.completionTime + " min" : "-"}`;
       }
       li.innerHTML = `
@@ -195,8 +224,25 @@ function renderTasks() {
       `;
       const actions = li.querySelector(".task-actions");
       if (task.status === "open" && task.player === currentPlayerId) {
-        actions.innerHTML = `<button class="submit-task">Abschließen</button><input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}"><button class="delete-task">🗑️</button>`;
-        actions.querySelector(".submit-task").addEventListener("click", () => submitTask(task));
+        let approverSelectHtml = '';
+        if (players.length > 2) {
+          approverSelectHtml = `<select class="approver-select" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:8px;padding:0.3em 1em;margin-left:0.7em;font-size:1em;">`+
+            `<option value="__anyone__">Jeder darf prüfen</option>` +
+            players.filter(p => p.id !== currentPlayerId).map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
+            `</select>`;
+        }
+        actions.innerHTML = `<button class="submit-task">Abschließen</button>${approverSelectHtml}<input type="date" class="edit-due-date" value="${task.dueDate ? task.dueDate : ''}"><button class="delete-task">🗑️</button>`;
+        const submitBtn = actions.querySelector(".submit-task");
+        const approverSelect = actions.querySelector(".approver-select");
+        submitBtn.addEventListener("click", async () => {
+          let approverId = null;
+          if (players.length > 2 && approverSelect) {
+            approverId = approverSelect.value;
+          } else {
+            approverId = getOtherPlayerId();
+          }
+          await submitTask(task, approverId);
+        });
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
         const dateInput = actions.querySelector(".edit-due-date");
         let lastDueDate = task.dueDate ? new Date(task.dueDate) : null;
@@ -223,20 +269,23 @@ function renderTasks() {
           await loadAllData();
           renderTasks();
         });
-      } else if (task.status === "submitted" && task.approver === currentPlayerId) {
+      } else if (task.status === "submitted" && (task.approver === currentPlayerId || (task.approver === "__anyone__" && players.some(p => p.id === currentPlayerId)))) {
+        // Only allow approval if current user is the approver, or if 'anyone' is allowed
         actions.innerHTML = `<button class="approve-task">Bestätigen</button><button class="reject-task">Ablehnen</button>`;
         actions.querySelector(".approve-task").addEventListener("click", () => approveTask(task));
         actions.querySelector(".reject-task").addEventListener("click", () => rejectTask(task));
       } else if (task.status === "submitted" && task.player === currentPlayerId) {
         actions.innerHTML = `<span>Warte auf Bestätigung...</span>`;
+      } else if (task.status === "submitted" && task.approver === "__anyone__") {
+        actions.innerHTML = `<span>Warte auf Prüfer-Auswahl...</span>`;
       } else if (task.status === "done") {
         actions.innerHTML = `<span>Status: Abgeschlossen</span>`;
       } else if (task.player === currentPlayerId) {
         actions.innerHTML = `<button class="delete-task">🗑️</button>`;
         actions.querySelector(".delete-task").addEventListener("click", () => deleteTask(task));
       }
-      // Only show difficulty/urgency dropdowns if not submitted/done
-      if (task.status === "open" || (task.status !== "submitted" && task.status !== "done")) {
+      // Only show difficulty/urgency dropdowns and time tracking if not submitted/done AND only for the task creator
+      if ((task.status === "open" || (task.status !== "submitted" && task.status !== "done")) && task.player === currentPlayerId) {
         // Add controls to change difficulty and urgency for every task
         const difficultySelect = document.createElement('select');
         for (let i = 1; i <= 4; i++) {
@@ -279,9 +328,44 @@ function renderTasks() {
         // Insert after the title
         li.querySelector('span').appendChild(difficultySelect);
         li.querySelector('span').appendChild(urgencySelect);
-      }
-      // Add time tracking input for open tasks
-      if (task.status === "open") {
+        // --- Notes field for task creator (visible in all states, but only for creator) ---
+        // Place below dropdowns, above time tracking
+        const notesDiv = document.createElement('div');
+        notesDiv.className = 'task-notes-row';
+        notesDiv.style.margin = '0.5em 0 0.5em 0';
+        const notesLabel = document.createElement('label');
+        notesLabel.textContent = 'Notizen:';
+        notesLabel.style.display = 'block';
+        notesLabel.style.fontWeight = 'bold';
+        notesLabel.style.marginBottom = '0.2em';
+        const notesArea = document.createElement('textarea');
+        notesArea.className = 'task-notes-area';
+        notesArea.value = task.notes || '';
+        notesArea.rows = 3;
+        notesArea.style.width = '100%';
+        notesArea.style.maxHeight = '4.5em';
+        notesArea.style.overflowY = 'auto';
+        notesArea.style.resize = 'vertical';
+        notesArea.style.background = '#232526';
+        notesArea.style.color = '#ffb347';
+        notesArea.style.border = '1.5px solid #ffb347';
+        notesArea.style.borderRadius = '8px';
+        notesArea.style.fontSize = '1em';
+        notesArea.style.marginBottom = '0.2em';
+        notesArea.placeholder = 'Fortschritt, Ideen, ToDos...';
+        // Save notes on blur
+        notesArea.addEventListener('change', async () => {
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: notesArea.value })
+          });
+        });
+        notesDiv.appendChild(notesLabel);
+        notesDiv.appendChild(notesArea);
+        li.querySelector('span').appendChild(notesDiv);
+        // --- End notes field ---
+        // Add time tracking input for open tasks (only for creator)
         const timeDiv = document.createElement('div');
         timeDiv.className = 'time-track-row';
         let currentTime = parseInt(task.completionTime) || 0;
@@ -304,6 +388,44 @@ function renderTasks() {
           renderTasks();
         });
         li.querySelector('span').appendChild(timeDiv);
+      }
+      // Show notes field for creator in all other states (submitted, done, etc)
+      else if (task.player === currentPlayerId) {
+        // Place below dropdowns, above any other controls
+        const notesDiv = document.createElement('div');
+        notesDiv.className = 'task-notes-row';
+        notesDiv.style.margin = '0.5em 0 0.5em 0';
+        const notesLabel = document.createElement('label');
+        notesLabel.textContent = 'Notizen:';
+        notesLabel.style.display = 'block';
+        notesLabel.style.fontWeight = 'bold';
+        notesLabel.style.marginBottom = '0.2em';
+        const notesArea = document.createElement('textarea');
+        notesArea.className = 'task-notes-area';
+        notesArea.value = task.notes || '';
+        notesArea.rows = 3;
+        notesArea.style.width = '100%';
+        notesArea.style.maxHeight = '4.5em';
+        notesArea.style.overflowY = 'auto';
+        notesArea.style.resize = 'vertical';
+        notesArea.style.background = '#232526';
+        notesArea.style.color = '#ffb347';
+        notesArea.style.border = '1.5px solid #ffb347';
+        notesArea.style.borderRadius = '8px';
+        notesArea.style.fontSize = '1em';
+        notesArea.style.marginBottom = '0.2em';
+        notesArea.placeholder = 'Fortschritt, Ideen, ToDos...';
+        notesArea.addEventListener('change', async () => {
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: notesArea.value })
+          });
+        });
+        notesDiv.appendChild(notesLabel);
+        notesDiv.appendChild(notesArea);
+        // Insert after the title and dropdowns
+        li.querySelector('span').appendChild(notesDiv);
       }
       list.appendChild(li);
     });
@@ -328,6 +450,20 @@ function renderTasks() {
         if (task.completionTime) {
           details += ` | Zeit: ${task.completionTime} min`;
         }
+        // Show approver if more than 2 players and approver is set
+        if (players.length > 2 && task.approver) {
+          let approverName = '';
+          if (task.approver === '__anyone__') {
+            if (task.status === 'done' && task.confirmedBy) {
+              approverName = getPlayerById(task.confirmedBy)?.name || task.confirmedBy;
+            } else {
+              approverName = 'Jeder';
+            }
+          } else {
+            approverName = getPlayerById(task.approver)?.name || task.approver;
+          }
+          details += ` | Prüfer: <b>${approverName}</b>`;
+        }
         // Show rating if present (always show 5 stars, filled or empty)
         let ratingStars = '';
         let ratingValue = typeof task.rating === 'number' ? task.rating : 0;
@@ -343,7 +479,26 @@ function renderTasks() {
         if (task.answerCommentary) {
           commentaryBlock += `<div class='commentary-block'><b>Antwort:</b><div class='commentary-text'>${task.answerCommentary}</div></div>`;
         }
-        li.innerHTML = `<span>${info}<div class='task-details'>${details}</div>${commentaryBlock}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
+        // If current user is creator, show notes field below answer/commentary
+        let notesBlock = '';
+        if (task.player === currentPlayerId) {
+          notesBlock += `<div class='task-notes-row' style='margin:0.5em 0 0.5em 0;'>`;
+          notesBlock += `<label style='display:block;font-weight:bold;margin-bottom:0.2em;'>Notizen:</label>`;
+          notesBlock += `<textarea class='task-notes-area' rows='3' style='width:100%;max-height:4.5em;overflow-y:auto;resize:vertical;background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:8px;font-size:1em;margin-bottom:0.2em;' placeholder='Fortschritt, Ideen, ToDos...'>${task.notes || ''}</textarea>`;
+          notesBlock += `</div>`;
+        }
+        li.innerHTML = `<span>${info}<div class='task-details'>${details}</div>${commentaryBlock}${notesBlock}</span><div class="task-actions"><span>Abgeschlossen</span></div>`;
+        // Add event listener for notes textarea if present
+        if (task.player === currentPlayerId) {
+          const notesArea = li.querySelector('.task-notes-area');
+          notesArea.addEventListener('change', async () => {
+            await fetch(`/api/archive/${task.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notes: notesArea.value })
+            });
+          });
+        }
         list.appendChild(li);
       });
     }
@@ -414,16 +569,17 @@ async function claimReward(level) {
 }
 
 async function savePlayerStats(playerId, exp, claimedRewards) {
+  // Only send if playerId is defined and not empty
+  if (!playerId) return;
   await fetch('/api/player-stats', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playerId, exp, claimedRewards })
+    body: JSON.stringify({ id: playerId, exp, claimedRewards })
   });
 }
 
 // When submitting a task, show prompts for commentary and completion time
-function submitTask(task) {
-  // Show prompt for commentary and completion time
+async function submitTask(task, approverId = null) {
   const commentary = prompt("Kommentar/Beweis (optional):", task.commentary || "");
   let completionTime = prompt("Benötigte Zeit in Minuten:", task.completionTime || "");
   completionTime = parseInt(completionTime);
@@ -431,7 +587,13 @@ function submitTask(task) {
     alert("Ungültige Zeitangabe.");
     return;
   }
-  // Update task on backend
+  if (!approverId) {
+    if (players.length > 2) {
+      approverId = "__anyone__";
+    } else {
+      approverId = getOtherPlayerId();
+    }
+  }
   fetch(`/api/tasks/${task.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -440,12 +602,59 @@ function submitTask(task) {
       completionTime,
       completedAt: new Date().toISOString(),
       status: "submitted",
-      approver: getOtherPlayerId()
+      approver: approverId
     })
   }).then(async () => {
     await loadAllData();
     renderTasks();
   });
+}
+
+function showApproverSelectModal() {
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class='modal-content'>
+      <h3>Prüfer auswählen</h3>
+      <div id='approver-btn-list'></div>
+      <div style='margin-top:1em;'>
+        <button id='approver-cancel'>Abbrechen</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const btnList = modal.querySelector('#approver-btn-list');
+  // Add 'anyone' option as a button
+  const anyoneBtn = document.createElement('button');
+  anyoneBtn.textContent = 'Jeder darf prüfen';
+  anyoneBtn.style.display = 'block';
+  anyoneBtn.style.margin = '0.5em auto';
+  anyoneBtn.onclick = () => {
+    modal.remove();
+    resolve('__anyone__');
+  };
+  // We'll resolve the promise when a button is clicked
+  let resolve;
+  const promise = new Promise(r => { resolve = r; });
+  btnList.appendChild(anyoneBtn);
+  // Add a button for each player except current
+  players.filter(p => p.id !== currentPlayerId).forEach(p => {
+    const btn = document.createElement('button');
+    btn.textContent = p.name;
+    btn.style.display = 'block';
+    btn.style.margin = '0.5em auto';
+    btn.onclick = () => {
+      modal.remove();
+      resolve(p.id);
+    };
+    btnList.appendChild(btn);
+  });
+  modal.querySelector('#approver-cancel').onclick = () => {
+    modal.remove();
+    resolve(null);
+  };
+  return promise;
 }
 
 async function saveTasksToBackend() {
