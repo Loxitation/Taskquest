@@ -491,3 +491,15 @@ label[for='difficulty-scale'] {
 .exp-rewards-box .collapse-btn, .exp-explanation-box .collapse-btn {
   display: none !important;
 }
+.commentary-text {
+  max-height: 2.8em;
+  overflow-y: auto;
+  display: block;
+  line-height: 1.4em;
+  padding-right: 0.5em;
+  margin-bottom: 0.2em;
+  word-break: break-word;
+}
+.commentary-block {
+  margin-bottom: 0.3em;
+}
