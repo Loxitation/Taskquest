@@ -226,13 +226,33 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
 }
 
 /* Fix task section header/tabs overflow */
-.task-section-header {
-  box-sizing: border-box;
+/* Task section header: make much more prominent and visually distinct */
+#task-list li.task-section-header {
+  border: none;
+  background: linear-gradient(90deg, #18191c 80%, #232526 100%);
+  box-shadow: 0 2px 16px #ffb34733, 0 0 0 2px #232526;
+  border-radius: 14px;
+  padding: 1.2em 1.5em 1.2em 1.5em;
+  margin: 2.2em 0 1.2em 0;
+  font-weight: 900;
+  color: #ffb347;
+  font-size: 1.45em;
+  letter-spacing: 1.2px;
+  position: relative;
+  text-shadow: 0 2px 12px #ffb34744, 0 0 2px #232526;
+  border-left: 8px solid #ffb347;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+#task-list li.task-section-header.opponent-header::before {
+  content: '';
+  display: block;
+  height: 5px;
   width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  margin-right: 0;
+  background: linear-gradient(90deg, #ffb347 0%, #232526 100%);
+  border-radius: 2px;
+  position: absolute;
+  top: -1.5em;
+  left: 0;
 }
 
 /* Task separators */
@@ -480,10 +500,38 @@ label[for='difficulty-scale'] {
   top: -1.1em;
   left: 0;
 }
-@media (max-width: 600px) {
-  #task-list li, #task-list li.task-section-header {
+.task-user-header {
+  border: none;
+  background: linear-gradient(90deg, #18191c 80%, #232526 100%);
+  box-shadow: 0 2px 16px #ffb34733, 0 0 0 2px #232526;
+  border-radius: 14px;
+  padding: 1.2em 1.5em 1.2em 1.5em;
+  margin: 2.2em 0 1.2em 0;
+  font-weight: 900;
+  color: #ffb347;
+  font-size: 1.45em;
+  letter-spacing: 1.2px;
+  position: relative;
+  text-shadow: 0 2px 12px #ffb34744, 0 0 2px #232526;
+  border-left: 8px solid #ffb347;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.task-user-header.opponent-header::before {
+  content: '';
+  display: block;
+  height: 5px;
+  width: 100%;
+  background: linear-gradient(90deg, #ffb347 0%, #232526 100%);
+  border-radius: 2px;
+  position: absolute;
+  top: -1.5em;
+  left: 0;
+}
+@media (max-width: 700px) {
+  .task-user-header {
     padding-left: 0.5em;
     padding-right: 0.5em;
+    font-size: 1.1em;
   }
 }
 
