@@ -59,6 +59,7 @@ function emitNotification(notification) {
 
 // GET alle Tasks
 app.get('/api/tasks', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   const tasks = readJSON(TASKS_FILE);
   res.json(tasks);
 });
@@ -218,12 +219,14 @@ app.post('/api/archive/clear', (req, res) => {
 
 // GET Archiv
 app.get('/api/archive', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   const archive = readJSON(ARCHIVE_FILE);
   res.json(archive);
 });
 
 // GET all players (id and name)
 app.get('/api/players', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   let stats = readJSON(PLAYER_STATS_FILE);
   if (!Array.isArray(stats)) stats = [];
   // Return array of { id, name }
@@ -233,6 +236,7 @@ app.get('/api/players', (req, res) => {
 
 // GET/POST Player Stats (EXP, rewards, etc.)
 app.get('/api/player-stats', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   let stats = readJSON(PLAYER_STATS_FILE);
   if (!Array.isArray(stats)) stats = [];
   res.json(stats);
@@ -293,6 +297,7 @@ app.post('/api/player-stats', (req, res) => {
 
 // GET all notifications
 app.get('/api/notifications', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   let notifications = readJSON(NOTIFICATIONS_FILE);
   res.json(notifications);
 });

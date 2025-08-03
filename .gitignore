@@ -7,6 +7,9 @@ node_modules/
 backend/archive.json
 backend/playerStats.json
 backend/tasks.json
+/backend/archive.json
+/backend/playerStats.json
+/backend/tasks.json
 archive.json
 playerStats.json
 tasks.json

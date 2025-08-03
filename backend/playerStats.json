@@ -2,16 +2,13 @@
   {
     "id": "1",
     "name": "Leon",
-    "exp": 13369,
-    "claimedRewards": [
-      1,
-      2
-    ]
+    "exp": 0,
+    "claimedRewards": []
   },
   {
     "id": "2",
     "name": "Daniel",
-    "exp": 72,
+    "exp": 0,
     "claimedRewards": []
   },
   {
