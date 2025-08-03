@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "name": "test",
+    "difficulty": 5,
+    "urgency": 5,
+    "dueDate": null,
+    "player": "1",
+    "id": 1754224696492,
+    "status": "open",
+    "confirmedBy": null,
+    "minutesWorked": 20490
+  }
+]

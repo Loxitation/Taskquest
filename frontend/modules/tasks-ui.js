@@ -428,9 +428,11 @@ export function renderTasksUI(playerId, filter) {
         addMinBtn.addEventListener('click', async e => {
           e.preventDefault();
           const addValue = Number(minInput.value);
+          if (isNaN(addValue) || addValue <= 0) return;
           const currentValue = Number(task.minutesWorked) || 0;
           const newValue = currentValue + addValue;
           await updateTask(task.id, { minutesWorked: newValue });
+          minInput.value = 0; // Reset input after adding
         });
       }
       // Due date
@@ -454,13 +456,10 @@ export function renderTasksUI(playerId, filter) {
       }
       // Minutes worked - sync on blur for all users
       if (minInput) {
-        minInput.value = task.minutesWorked || 0;
+        minInput.value = 0;
         minInput.readOnly = !isOwner || locked;
         minInput.addEventListener('blur', async e => {
-          const newValue = Number(minInput.value);
-          if (!isNaN(newValue) && newValue !== Number(task.minutesWorked)) {
-            await updateTask(task.id, { minutesWorked: newValue });
-          }
+          // Do nothing on blur, only add-minutes button should add
         });
       }
       // Due date - sync on change for all users
