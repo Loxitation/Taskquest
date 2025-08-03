@@ -492,9 +492,9 @@ label[for='difficulty-scale'] {
   display: none !important;
 }
 .commentary-text {
-  max-height: 2.8em;
-  overflow-y: auto;
   display: block;
+  max-height: 4.2em;
+  overflow-y: auto;
   line-height: 1.4em;
   padding-right: 0.5em;
   margin-bottom: 0.2em;
@@ -632,4 +632,203 @@ label[for='difficulty-scale'] {
 #difficulty-scale button:focus, #urgency-scale button:focus {
   border-color: #7ed957;
   color: #7ed957;
+}
+
+/* --- Notification Celebration Banner --- */
+.notification-banner {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%) scale(1.08);
+  background: linear-gradient(90deg, #ffb347 0%, #7ed957 100%);
+  color: #232526;
+  border: 3.5px solid #fff;
+  border-radius: 18px;
+  padding: 1.5em 3.5em;
+  font-size: 1.45em;
+  font-weight: bold;
+  z-index: 99999;
+  box-shadow: 0 8px 32px #ffb34777, 0 0 0 8px #7ed95733;
+  text-align: center;
+  opacity: 0.98;
+  letter-spacing: 0.5px;
+  animation: pop-celebrate 0.7s cubic-bezier(.5,1.8,.5,1) 1;
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+}
+@keyframes pop-celebrate {
+  0% { transform: translateX(-50%) scale(0.7); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1.08); opacity: 0.98; }
+}
+.notification-banner b {
+  color: #232526;
+  text-shadow: 0 2px 8px #fff8, 0 0 2px #7ed95799;
+}
+.notification-banner .celebrate-emoji {
+  font-size: 2.1em;
+  margin-right: 0.2em;
+  filter: drop-shadow(0 2px 6px #fff8);
+  animation: emoji-bounce 1.2s infinite alternate cubic-bezier(.5,1.8,.5,1);
+}
+@keyframes emoji-bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-12px) scale(1.15); }
+}
+
+/* --- Task Card Styles (moved from inline) --- */
+.task-card {
+  border: 2px solid #3fa34d;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  border-radius: 16px;
+  background: #18191c;
+  list-style: none;
+}
+.task-title {
+  font-weight: bold;
+}
+.task-select-row {
+  margin-bottom: 0.5rem;
+}
+.task-note-row {
+  margin-bottom: 0.5rem;
+}
+.task-note {
+  width: 100%;
+  min-height: 2.5em;
+}
+.task-time-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.5rem;
+}
+.task-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.approve-task {
+  background: #7ed957;
+  color: #232526;
+  border: none;
+  padding: 0.4rem 1.2rem;
+  border-radius: 6px;
+}
+.decline-task {
+  background: #ffb347;
+  color: #232526;
+  border: none;
+  padding: 0.4rem 1.2rem;
+  border-radius: 6px;
+  margin-left: 0.7em;
+}
+.complete-task {
+  background: #3fa34d;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 1.2rem;
+  border-radius: 6px;
+}
+.delete-task {
+  background: #232526;
+  color: #ffb347;
+  border: 1.5px solid #ffb347;
+  border-radius: 6px;
+  padding: 0.4rem 1.2rem;
+}
+.waiting-approval {
+  color: #ffb347;
+  font-weight: bold;
+}
+.minutes-input {
+  width: 80px;
+}
+
+/* --- Task Sort Dropdown Styles --- */
+.task-sort-bar select {
+  background: linear-gradient(120deg, #232526 60%, #18191c 100%);
+  color: #ffb347;
+  border: 1.5px solid #ffb347;
+  border-radius: 8px;
+  padding: 0.4em 1.2em;
+  font-size: 1em;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  margin: 0 0.3em 0 0;
+  transition: background 0.18s, color 0.18s, border 0.18s, box-shadow 0.18s;
+  box-shadow: 0 1.5px 6px rgba(255,179,71,0.07);
+  cursor: pointer;
+}
+.task-sort-bar select:focus {
+  border-color: #7ed957;
+  color: #7ed957;
+}
+.task-sort-bar label {
+  color: #ffb347;
+  font-weight: bold;
+  margin-right: 0.5em;
+}
+/* Improve dropdown option visibility */
+.task-sort-bar select, .task-sort-bar select option {
+  background: #232526 !important;
+  color: #ffb347 !important;
+}
+.task-sort-bar select option:checked, .task-sort-bar select option:focus, .task-sort-bar select option:hover {
+  background: #18191c !important;
+  color: #7ed957 !important;
+}
+
+/* --- Styled Select Dropdowns --- */
+.styled-select {
+  background: #232526;
+  color: #FFD700;
+  border: 1.5px solid #FFD700;
+  border-radius: 6px;
+  padding: 0.2em 0.7em;
+  font-weight: bold;
+  font-size: 1em;
+  outline: none;
+  margin-right: 0.7em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.styled-select:focus {
+  border-color: #ffb347;
+  box-shadow: 0 0 0 2px #ffb34744;
+}
+.urgency-select {
+  color: #fff;
+  border-color: #ff5252;
+}
+.urgency-select option[value="5"] {
+  color: #ff5252;
+  background: #2d1a1a;
+  font-weight: bold;
+}
+.urgency-select option:not([value="5"]) {
+  color: #fff;
+  background: #232526;
+}
+.difficulty-select {
+  color: #FFD700;
+  border-color: #FFD700;
+}
+.difficulty-select option {
+  color: #FFD700;
+  background: #232526;
+}
+
+/* --- End Task Card Styles --- */
+
+/* --- Rewards Box Styles --- */
+.rewards-box {
+  max-height: 32em;
+  overflow-y: auto;
+  padding-right: 0.5em;
+}
+.rewards-box .reward-entry {
+  margin-bottom: 0.7em;
 }

@@ -14,9 +14,10 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // JSON-Dateien
-const TASKS_FILE = 'tasks.json';
-const ARCHIVE_FILE = 'archive.json';
-const PLAYER_STATS_FILE = 'playerStats.json';
+const TASKS_FILE = path.join(__dirname, 'tasks.json');
+const ARCHIVE_FILE = path.join(__dirname, 'archive.json');
+const PLAYER_STATS_FILE = path.join(__dirname, 'playerStats.json');
+const NOTIFICATIONS_FILE = path.join(__dirname, 'notifications.json');
 
 // --- SOCKET.IO SETUP ---
 const server = http.createServer(app);
@@ -46,6 +47,14 @@ function readJSON(file) {
 function writeJSON(file, data) {
   ensureFileExists(file, []);
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function emitNotification(notification) {
+  // Save notification to file
+  let notifications = readJSON(NOTIFICATIONS_FILE);
+  notifications.push(notification);
+  writeJSON(NOTIFICATIONS_FILE, notifications);
+  io.emit('notification', notification); // Real-time to all clients
 }
 
 // GET alle Tasks
@@ -108,18 +117,67 @@ app.post('/api/confirm/:id', (req, res) => {
   const tasks = readJSON(TASKS_FILE);
   const index = tasks.findIndex(t => t.id === taskId);
 
-  if (index !== -1 && tasks[index].player !== player && tasks[index].status === 'submitted') {
-    // If approver is '__anyone__', update it to the actual approver
+  if (index !== -1 && tasks[index].status === 'submitted') {
+    // Allow if player is the approver, or if approver is '__anyone__' and player is not the owner
+    const ownerId = tasks[index].player || tasks[index].playerId;
+    const isOwner = ownerId === player;
+    const isApprover = tasks[index].approver === player;
+    const isAnyone = tasks[index].approver === '__anyone__' && !isOwner;
+    if (!(isApprover || isAnyone)) {
+      return res.status(403).json({ error: 'Nicht berechtigt, diese Aufgabe zu bestätigen.' });
+    }
     if (tasks[index].approver === '__anyone__') {
-      tasks[index].approver = player;
+      tasks[index].approver = player; // Set actual approver
+    }
+    // Calculate EXP for the task
+    const task = tasks[index];
+    let exp = 10 * (task.difficulty || 1);
+    if (task.urgency && task.urgency > 0) exp += 5 * task.urgency;
+    if (task.minutesWorked) exp += parseInt(task.minutesWorked);
+    if (task.urgency && task.urgency > 0 && task.dueDate && new Date() <= new Date(task.dueDate)) {
+      exp += 20;
+    }
+    if (task.dueDate && new Date() > new Date(task.dueDate)) {
+      const daysLate = Math.ceil((new Date() - new Date(task.dueDate)) / (1000*3600*24));
+      exp = Math.floor(exp * Math.pow(0.8, daysLate));
+      if (daysLate >= 21) exp = Math.max(-10, exp);
+    }
+    if (task.urgency === 0) {
+      exp = Math.floor(exp * 0.5);
+    }
+    exp = Math.max(1, exp);
+    // Award EXP to owner
+    let stats = readJSON(PLAYER_STATS_FILE);
+    let owner = stats.find(s => s.id === ownerId);
+    if (owner) {
+      const prevExp = owner.exp || 0;
+      owner.exp = prevExp + exp;
+      writeJSON(PLAYER_STATS_FILE, stats);
+      // --- Level up notification logic (duplicate from /api/player-stats) ---
+      const getLevel = (exp) => Math.floor(1 + Math.log2(1 + exp / 100));
+      let oldLevel = getLevel(prevExp);
+      let newLevel = getLevel(owner.exp);
+      if (newLevel > oldLevel) {
+        for (let l = oldLevel + 1; l <= newLevel; l++) {
+          emitNotification({
+            type: 'levelup',
+            playerId: ownerId,
+            playerName: owner.name,
+            level: l,
+            timestamp: Date.now(),
+            seenBy: []
+          });
+        }
+      }
     }
     const completed = {
       ...tasks[index],
       confirmedBy: player,
       completedAt: new Date(),
       status: 'done',
-      rating: rating, // Save the rating in the archive
-      answerCommentary // Save the answer commentary
+      rating: rating,
+      answerCommentary,
+      exp
     };
     const archived = readJSON(ARCHIVE_FILE);
     archived.push(completed);
@@ -188,6 +246,8 @@ app.post('/api/player-stats', (req, res) => {
   // Remove any entries without an id or name (invalid entries)
   stats = stats.filter(s => s && s.id && s.name);
   let entry = stats.find(s => s.id === id);
+  let prevExp = entry ? entry.exp : 0;
+  let prevClaimed = entry ? (entry.claimedRewards || []).slice() : [];
   if (!entry) {
     entry = { id, name, exp: 0, claimedRewards: [] };
     stats.push(entry);
@@ -196,8 +256,91 @@ app.post('/api/player-stats', (req, res) => {
   if (typeof exp === 'number') entry.exp = exp;
   if (Array.isArray(claimedRewards)) entry.claimedRewards = claimedRewards;
   writeJSON(PLAYER_STATS_FILE, stats);
+  // --- Notification logic ---
+  // Level up notification
+  const getLevel = (exp) => Math.floor(1 + Math.log2(1 + exp / 100));
+  let oldLevel = getLevel(prevExp);
+  let newLevel = getLevel(entry.exp);
+  if (newLevel > oldLevel) {
+    for (let l = oldLevel + 1; l <= newLevel; l++) {
+      emitNotification({
+        type: 'levelup',
+        playerId: id,
+        playerName: entry.name,
+        level: l,
+        timestamp: Date.now(),
+        seenBy: []
+      });
+    }
+  }
+  // Reward claim notification
+  if (Array.isArray(claimedRewards)) {
+    let newClaims = claimedRewards.filter(r => !prevClaimed.includes(r));
+    newClaims.forEach(r => {
+      emitNotification({
+        type: 'reward',
+        playerId: id,
+        playerName: entry.name,
+        reward: r,
+        timestamp: Date.now(),
+        seenBy: []
+      });
+    });
+  }
   emitDataChanged();
   res.json({ success: true, stats });
+});
+
+// GET all notifications
+app.get('/api/notifications', (req, res) => {
+  let notifications = readJSON(NOTIFICATIONS_FILE);
+  res.json(notifications);
+});
+
+// PATCH: Mark notifications as seen by a player and clean up if all players have seen
+app.patch('/api/notifications/seen', (req, res) => {
+  const { playerId } = req.body;
+  let notifications = readJSON(NOTIFICATIONS_FILE);
+  let stats = readJSON(PLAYER_STATS_FILE);
+  const allPlayerIds = stats.map(s => s.id);
+  let changed = false;
+  notifications.forEach(n => {
+    if (!n.seenBy) n.seenBy = [];
+    if (!n.seenBy.includes(playerId)) {
+      n.seenBy.push(playerId);
+      changed = true;
+    }
+  });
+  // Remove notifications seen by all players
+  const filtered = notifications.filter(n => {
+    if (!n.seenBy) return true;
+    return allPlayerIds.some(pid => !n.seenBy.includes(pid));
+  });
+  if (changed || filtered.length !== notifications.length) {
+    writeJSON(NOTIFICATIONS_FILE, filtered);
+  }
+  res.json({ success: true });
+});
+
+// POST: Clear all player stats (reset exp and claimedRewards, keep id and name)
+app.post('/api/player-stats/clear', (req, res) => {
+  let stats = readJSON(PLAYER_STATS_FILE);
+  if (!Array.isArray(stats)) stats = [];
+  stats = stats.filter(s => s && s.id && s.name).map(s => ({
+    id: s.id,
+    name: s.name,
+    exp: 0,
+    claimedRewards: []
+  }));
+  writeJSON(PLAYER_STATS_FILE, stats);
+  emitDataChanged();
+  res.json({ success: true });
+});
+
+// POST: Clear all notifications
+app.post('/api/notifications/clear', (req, res) => {
+  writeJSON(NOTIFICATIONS_FILE, []);
+  res.json({ success: true });
 });
 
 // Standardroute

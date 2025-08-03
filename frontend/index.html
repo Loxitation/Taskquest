@@ -41,7 +41,6 @@
         <div class="add-task-row" style="flex-direction:row;align-items:center;gap:0.7rem;">
           <label for="due-date">Fällig bis:</label>
           <input type="date" id="due-date" style="margin-bottom:0.3rem;" />
-          <button id="no-due-date" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;">Kein Fälligkeitsdatum nötig</button>
         </div>
         <div class="add-task-row">
           <button id="add-task">Hinzufügen</button>
@@ -159,35 +158,6 @@
   </style>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
-  <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const toggleBtn = document.getElementById('toggle-exp-explanation');
-  const expContent = document.getElementById('exp-explanation-content');
-  toggleBtn.addEventListener('click', () => {
-    if (expContent.style.display === 'none') {
-      expContent.style.display = '';
-      toggleBtn.textContent = '–';
-    } else {
-      expContent.style.display = 'none';
-      toggleBtn.textContent = '+';
-    }
-  });
-
-  const toggleExpRewardsBtn = document.getElementById('toggle-exp-rewards');
-  const expRewardsContent = document.getElementById('exp-rewards-content');
-  toggleExpRewardsBtn.addEventListener('click', () => {
-    if (expRewardsContent.style.display === 'none' || expRewardsContent.style.display === '') {
-      expRewardsContent.style.display = 'block';
-      toggleExpRewardsBtn.textContent = 'Infocenter ausblenden';
-    } else {
-      expRewardsContent.style.display = 'none';
-      toggleExpRewardsBtn.textContent = 'Infocenter einblenden';
-    }
-  });
-  // Set initial state
-  document.getElementById('toggle-exp-rewards').textContent = 'Infocenter ausblenden';
-});
-</script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
