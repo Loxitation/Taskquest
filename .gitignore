@@ -7,7 +7,7 @@ node_modules/
 
 
 backend/archive.json
-#backend/playerStats.json
+backend/playerStats.json
 backend/tasks.json
 backkend/notifications.json
 # Logs
