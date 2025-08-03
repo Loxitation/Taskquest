@@ -3,12 +3,16 @@
     "id": "1",
     "name": "Leon",
     "exp": 0,
-    "claimedRewards": []
+    "claimedRewards": [],
+    "gotifyappapikey": "",
+    "gotifyserverurl": ""
   },
   {
     "id": "2",
     "name": "Daniel",
     "exp": 0,
-    "claimedRewards": []
+    "claimedRewards": [],
+    "gotifyappapikey": "",
+    "gotifyserverurl": ""
   }
 ]

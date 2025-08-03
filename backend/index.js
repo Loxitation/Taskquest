@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
+const { sendGotify } = require('./gotify');
 
 const app = express();
 const PORT = 3578;
@@ -103,9 +104,53 @@ app.patch('/api/tasks/:id', (req, res) => {
   if (index === -1) {
     return res.status(404).json({ error: 'Task not found' });
   }
+  const prevStatus = tasks[index].status;
   tasks[index] = { ...tasks[index], ...req.body };
   writeJSON(TASKS_FILE, tasks);
   emitDataChanged();
+  // Push notification if status changed to 'submitted'
+  if (prevStatus !== 'submitted' && tasks[index].status === 'submitted') {
+    let stats = readJSON(PLAYER_STATS_FILE);
+    const ownerId = tasks[index].player || tasks[index].playerId;
+    const approverId = tasks[index].approver;
+    const owner = stats.find(s => s.id === ownerId);
+    if (approverId === '__anyone__') {
+      // Notify all users except the owner
+      const targets = stats.filter(s => s.id !== ownerId && s.gotifyappapikey && s.gotifyserverurl)
+        .map(s => ({ url: s.gotifyserverurl, token: s.gotifyappapikey }));
+      const task = tasks[index];
+      const details = [
+        `Aufgabe: ${task.name}`,
+        owner ? `Von: ${owner.name}` : '',
+        task.description ? `Beschreibung: ${task.description}` : '',
+        task.difficulty ? `Schwierigkeit: ${task.difficulty}` : '',
+        task.urgency ? `Dringlichkeit: ${task.urgency}` : ''
+      ].filter(Boolean).join('\n');
+      sendGotify(
+        'Neue Aufgabe zur Freigabe',
+        `Eine Aufgabe wurde zur Freigabe eingereicht.\n${details}`,
+        targets
+      );
+    } else {
+      // Notify only the selected approver
+      const approver = stats.find(s => s.id === approverId);
+      if (approver && approver.gotifyappapikey && approver.gotifyserverurl) {
+        const task = tasks[index];
+        const details = [
+          `Aufgabe: ${task.name}`,
+          owner ? `Von: ${owner.name}` : '',
+          task.description ? `Beschreibung: ${task.description}` : '',
+          task.difficulty ? `Schwierigkeit: ${task.difficulty}` : '',
+          task.urgency ? `Dringlichkeit: ${task.urgency}` : ''
+        ].filter(Boolean).join('\n');
+        sendGotify(
+          'Neue Aufgabe zur Freigabe',
+          `Dir wurde eine Aufgabe zur Freigabe eingereicht.\n${details}`,
+          [{ url: approver.gotifyserverurl, token: approver.gotifyappapikey }]
+        );
+      }
+    }
+  }
   res.json({ success: true, task: tasks[index] });
 });
 
@@ -169,6 +214,25 @@ app.post('/api/confirm/:id', (req, res) => {
             seenBy: []
           });
         }
+        // Gotify push for level-up: all users, special message for leveler
+        const allPlayers = readJSON(PLAYER_STATS_FILE);
+        allPlayers.forEach(p => {
+          if (p.gotifyappapikey && p.gotifyserverurl) {
+            if (p.id === ownerId) {
+              sendGotify(
+                'Level Up!',
+                `Glückwunsch! Du hast Level ${newLevel} erreicht!`,
+                [{ url: p.gotifyserverurl, token: p.gotifyappapikey }]
+              );
+            } else {
+              sendGotify(
+                'Level Up!',
+                `Krieg deinen Arsch hoch! ${owner.name} hat Level ${newLevel} erreicht!`,
+                [{ url: p.gotifyserverurl, token: p.gotifyappapikey }]
+              );
+            }
+          }
+        });
       }
     }
     const completed = {
@@ -186,6 +250,27 @@ app.post('/api/confirm/:id', (req, res) => {
     tasks.splice(index, 1);
     writeJSON(TASKS_FILE, tasks);
     emitDataChanged();
+    // Push notification for approval to the owner only, with details
+    if (owner && owner.gotifyappapikey && owner.gotifyserverurl) {
+      const approver = stats.find(s => s.id === player);
+      // Show 5-star rating as stars
+      let stars = '';
+      if (typeof rating === 'number' && !isNaN(rating)) {
+        stars = '★'.repeat(Math.max(1, Math.min(5, rating))) + '☆'.repeat(5 - Math.max(1, Math.min(5, rating)));
+      }
+      const details = [
+        `Aufgabe: ${completed.name}`,
+        approver ? `Bestätigt von: ${approver.name}` : '',
+        `EXP erhalten: ${exp}`,
+        stars ? `Bewertung: ${stars}` : '',
+        completed.description ? `Beschreibung: ${completed.description}` : ''
+      ].filter(Boolean).join('\n');
+      sendGotify(
+        'Aufgabe bestätigt',
+        `Deine Aufgabe wurde genehmigt und abgeschlossen.\n${details}`,
+        [{ url: owner.gotifyserverurl, token: owner.gotifyappapikey }]
+      );
+    }
     res.json({ success: true });
   } else {
     res.status(403).json({ error: 'Task nicht vorhanden oder nicht zur Freigabe bereit.' });
@@ -276,6 +361,25 @@ app.post('/api/player-stats', (req, res) => {
         seenBy: []
       });
     }
+    // Gotify push for level-up: all users, special message for leveler
+    const allPlayers = readJSON(PLAYER_STATS_FILE);
+    allPlayers.forEach(p => {
+      if (p.gotifyappapikey && p.gotifyserverurl) {
+        if (p.id === id) {
+          sendGotify(
+            'Level Up!',
+            `Glückwunsch! Du hast Level ${newLevel} erreicht!`,
+            [{ url: p.gotifyserverurl, token: p.gotifyappapikey }]
+          );
+        } else {
+          sendGotify(
+            'Level Up!',
+            `Get your ass up! ${entry.name} hat Level ${newLevel} erreicht!`,
+            [{ url: p.gotifyserverurl, token: p.gotifyappapikey }]
+          );
+        }
+      }
+    });
   }
   // Reward claim notification
   if (Array.isArray(claimedRewards)) {
@@ -327,7 +431,7 @@ app.patch('/api/notifications/seen', (req, res) => {
   res.json({ success: true });
 });
 
-// POST: Clear all player stats (reset exp and claimedRewards, keep id and name)
+// POST: Clear all player stats (reset exp and claimedRewards, keep id, name, gotifyappapikey, gotifyserverurl)
 app.post('/api/player-stats/clear', (req, res) => {
   let stats = readJSON(PLAYER_STATS_FILE);
   if (!Array.isArray(stats)) stats = [];
@@ -335,7 +439,9 @@ app.post('/api/player-stats/clear', (req, res) => {
     id: s.id,
     name: s.name,
     exp: 0,
-    claimedRewards: []
+    claimedRewards: [],
+    gotifyappapikey: typeof s.gotifyappapikey === 'string' ? '' : undefined,
+    gotifyserverurl: typeof s.gotifyserverurl === 'string' ? '' : undefined
   }));
   writeJSON(PLAYER_STATS_FILE, stats);
   emitDataChanged();
