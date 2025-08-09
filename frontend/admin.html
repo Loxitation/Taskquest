@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskQuest - Admin-Panel</title>
+    <link rel="icon" type="image/png" href="wizard-favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: linear-gradient(120deg, #232526 0%, #18191c 100%);
+            min-height: 100vh;
+            color: #f3f3f3;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
+            color: #232526;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(255,179,71,0.3);
+        }
+
+        .admin-section {
+            background: #232526;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+            border: 1px solid #3a3a3a;
+        }
+
+        .admin-section h3 {
+            color: #ffb347;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #ffb347;
+            padding-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+
+        .config-item {
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #18191c;
+            transition: border-color 0.2s;
+        }
+
+        .config-item:hover {
+            border-color: #ffb347;
+        }
+
+        .config-item label {
+            display: block;
+            font-weight: 600;
+            color: #f3f3f3;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .config-item input, .config-item select, .config-item textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+            background: #232526;
+            color: #f3f3f3;
+            box-sizing: border-box;
+        }
+
+        .config-item input:focus, .config-item select:focus, .config-item textarea:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 5px rgba(255,179,71,0.3);
+        }
+
+        .config-item .description {
+            font-size: 0.8rem;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #ffb347;
+            color: #232526;
+        }
+
+        .btn-primary:hover {
+            background: #ff8c42;
+        }
+
+        .btn-success {
+            background: #7ed957;
+            color: #232526;
+        }
+
+        .btn-success:hover {
+            background: #6bc946;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: #18191c;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #444;
+            color: #f3f3f3;
+        }
+
+        .users-table th {
+            background: #2a2a2a;
+            font-weight: 600;
+            color: #ffb347;
+            border-bottom: 2px solid #ffb347;
+        }
+
+        .config-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .config-category {
+            background: #18191c;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #444;
+        }
+
+        .config-category h4 {
+            color: #7ed957;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #555;
+            padding-bottom: 0.5rem;
+        }
+
+        .user-actions .btn {
+            margin-right: 0.5rem;
+        }
+
+        .level-titles-table,
+        .reward-item {
+            background: #18191c;
+            border: 1px solid #444;
+        }
+
+        .level-titles-table th {
+            background: #2a2a2a;
+            color: #ffb347;
+            border-bottom: 2px solid #ffb347;
+        }
+
+        .level-titles-table td {
+            color: #f3f3f3;
+            border-bottom: 1px solid #444;
+        }
+
+        .reward-item {
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .reward-item input, .reward-item select {
+            background: #232526;
+            color: #f3f3f3;
+            border: 1px solid #555;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .level-titles-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .level-titles-table th,
+        .level-titles-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .level-titles-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .level-titles-table input {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            padding: 0.5rem;
+            background: white;
+            color: #1f2937;
+        }
+
+        .rewards-config {
+            margin-top: 1rem;
+        }
+
+        .reward-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f9fafb;
+        }
+
+        .reward-item input, .reward-item select {
+            margin-bottom: 0.5rem;
+            background: white;
+            color: #1f2937;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .nav-bar {
+            background: #1f2937;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 0.75rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <div>
+            <strong>TaskQuest Admin-Panel</strong>
+        </div>
+        <div>
+            <span id="admin-username"></span>
+            <a href="/">Dashboard</a>
+            <a href="#" onclick="logout()">Abmelden</a>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🧙‍♂️ Admin-Panel</h1>
+            <p>Benutzer verwalten, Systemeinstellungen konfigurieren und das TaskQuest-Reich überwachen</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <!-- User Management Section -->
+        <div class="admin-section">
+            <h3>👥 Benutzerverwaltung</h3>
+            <button class="btn btn-primary" onclick="showCreateUserModal()">Neuen Benutzer erstellen</button>
+            
+            <table class="users-table" id="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Benutzername</th>
+                        <th>Rolle</th>
+                        <th>E-Mail</th>
+                        <th>Erstellt</th>
+                        <th>Letzter Login</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- System Configuration Section -->
+        <div class="admin-section">
+            <h3>⚙️ Systemkonfiguration</h3>
+            <div class="config-categories">
+                <div class="config-category">
+                    <h4>🎯 EXP-Einstellungen</h4>
+                    <div class="config-grid" id="exp-config">
+                    </div>
+                </div>
+                <div class="config-category">
+                    <h4>🏆 Belohnungen</h4>
+                    <div class="config-grid" id="rewards-config-section">
+                    </div>
+                </div>
+                <div class="config-category">
+                    <h4>🔧 Allgemeine Einstellungen</h4>
+                    <div class="config-grid" id="general-config">
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Alle Änderungen speichern</button>
+        </div>
+
+        <!-- Level Titles Management -->
+        <div class="admin-section">
+            <h3>🏆 Level-Titel</h3>
+            <table class="level-titles-table" id="level-titles-table">
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Title</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="level-titles-tbody">
+                </tbody>
+            </table>
+            <button class="btn btn-primary" onclick="addLevelTitle()">Add Level Title</button>
+            <button class="btn btn-success" onclick="saveLevelTitles()">Save All Titles</button>
+        </div>
+
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateUserModal()">&times;</span>
+            <h3>Create New User</h3>
+            <form id="create-user-form">
+                <div style="margin-bottom: 1rem;">
+                    <label>Username:</label>
+                    <input type="text" id="new-username" required>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Password:</label>
+                    <input type="password" id="new-password" required>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Role:</label>
+                    <select id="new-role">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Email (optional):</label>
+                    <input type="email" id="new-email">
+                </div>
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+        </div>
+
+        <!-- Critical Actions Section -->
+        <div class="admin-section" style="border: 2px solid #dc3545; background: rgba(220, 53, 69, 0.1);">
+            <h3 style="color: #dc3545;">⚠️ Kritische Aktionen</h3>
+            <div style="background: rgba(220, 53, 69, 0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <p style="color: #dc3545; font-weight: bold; margin-bottom: 0.5rem;">⚠️ WARNUNG: Diese Aktion ist unwiderruflich!</p>
+                <p style="color: #f3f3f3; margin-bottom: 1rem;">Das Zurücksetzen der Anwendung löscht ALLE Daten permanent:</p>
+                <ul style="color: #f3f3f3; margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li>Alle Aufgaben und deren Verlauf</li>
+                    <li>Benutzer-EXP und Statistiken</li>
+                    <li>Systemkonfigurationen</li>
+                    <li>Archivierte Daten</li>
+                </ul>
+                <button id="reset-app" class="btn btn-danger" style="font-weight: bold;">
+                    🗑️ Anwendung komplett zurücksetzen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

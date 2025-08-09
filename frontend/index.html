@@ -8,14 +8,9 @@
 </head>
 <body>
   <div id="player-select-bar">
-    <label for="player-select">Spieler:</label>
-    <select id="player-select">
-      <!-- Options will be populated dynamically -->
-    </select>
     <span id="current-player-info" style="margin-left: 1rem;">
-      Aktueller Spieler: <b>Leon</b>
+      Current Player: <b>Loading...</b>
     </span>
-    <button id="reset-app" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;margin-left:auto;">Reset</button>
   </div>
 
   <h1>🧙‍♂️ TaskQuest</h1>
@@ -23,6 +18,11 @@
   <div class="main-layout">
     <aside class="left-col">
       <div id="scoreboard-box" class="scoreboard-box"></div>
+      <div id="personal-notes-box" class="personal-notes-box">
+        <h3>📝 Persönliche Notizen</h3>
+        <textarea id="personal-notes" placeholder="Ihre persönlichen Notizen hier..."></textarea>
+        <div class="notes-info">Nur für Sie sichtbar</div>
+      </div>
     </aside>
     <main class="center-col">
       <div id="add-task-box" class="add-task-box">

@@ -388,6 +388,61 @@ label[for='difficulty-scale'] {
 }
 
 /* --- Responsive tweaks for scoreboard --- */
+
+/* --- Personal Notes Styles --- */
+.personal-notes-box {
+  background: #18191c;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  padding: 1.5em 2em 1.2em 2em;
+  margin-bottom: 2em;
+  min-width: 260px;
+  max-width: 340px;
+  color: #fff;
+  font-size: 1.08em;
+}
+
+.personal-notes-box h3 {
+  color: #ffb347;
+  margin-bottom: 1.1em;
+  font-size: 1.2em;
+  margin-top: 0;
+}
+
+#personal-notes {
+  width: 100%;
+  min-height: 120px;
+  background: #232526;
+  border: 1.5px solid #555;
+  border-radius: 8px;
+  padding: 12px;
+  color: #f3f3f3;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 0.95em;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+#personal-notes:focus {
+  outline: none;
+  border-color: #ffb347;
+  box-shadow: 0 0 8px rgba(255,179,71,0.2);
+}
+
+#personal-notes::placeholder {
+  color: #888;
+}
+
+.notes-info {
+  font-size: 0.85em;
+  color: #7ed957;
+  margin-top: 0.5em;
+  font-style: italic;
+  text-align: center;
+}
+
+/* --- Responsive tweaks for scoreboard --- */
 @media (max-width: 1600px) {
   .scoreboard-box {
     min-width: 180px;

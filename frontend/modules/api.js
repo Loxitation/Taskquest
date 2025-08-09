@@ -1,6 +1,17 @@
-// API utility functions for TaskQuest
+// API utility functions for TaskQuest (with authentication)
 export async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, options);
+  // Always include credentials for authentication
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include'
+  });
+  
+  if (res.status === 401) {
+    // Unauthorized - redirect to login
+    window.location.href = '/login.html';
+    throw new Error('Authentication required');
+  }
+  
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }

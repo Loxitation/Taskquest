@@ -12,19 +12,19 @@ export async function loadTasksAndArchive() {
 }
 
 export function getTasksByPlayer(playerId) {
-  return tasks.filter(t => t.player === playerId);
+  return tasks.filter(t => String(t.player) === String(playerId));
 }
 
 export function getArchiveByPlayer(playerId) {
-  return archive.filter(t => t.player === playerId);
+  return archive.filter(t => String(t.player) === String(playerId));
 }
 
 export function getTasksByPlayerAndFilter(playerId, filter) {
   if (filter === 'erledigt') {
     // Only archived tasks for this player
-    return archive.filter(t => (t.player === playerId || t.playerId === playerId));
+    return archive.filter(t => (String(t.player) === String(playerId) || String(t.playerId) === String(playerId)));
   }
-  let filtered = tasks.filter(t => (t.player === playerId || t.playerId === playerId));
+  let filtered = tasks.filter(t => (String(t.player) === String(playerId) || String(t.playerId) === String(playerId)));
   if (filter === 'offen') {
     filtered = filtered.filter(t => t.status === 'open');
   } else if (filter === 'eingereicht') {

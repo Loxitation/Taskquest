@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskQuest - Profile Settings</title>
+    <link rel="icon" type="image/png" href="wizard-favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .profile-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-section h3 {
+            color: #4a5568;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .nav-bar {
+            background: #1f2937;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 0.75rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .help-text {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .strength-weak { color: #ef4444; }
+        .strength-medium { color: #f59e0b; }
+        .strength-strong { color: #10b981; }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <div>
+            <strong>TaskQuest Profile Settings</strong>
+        </div>
+        <div>
+            <span id="current-username"></span>
+            <a href="/">Dashboard</a>
+            <a href="/admin.html" id="admin-link" style="display: none;">Admin Panel</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-header">
+            <h1>👤 Profile Settings</h1>
+            <p>Manage your account settings and preferences</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <!-- Account Information -->
+        <div class="profile-section">
+            <h3>📋 Account Information</h3>
+            <form id="profile-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="username" readonly>
+                        <div class="help-text">Username cannot be changed</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <input type="text" id="role" readonly>
+                        <div class="help-text">Role is assigned by administrators</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="email" placeholder="your@email.com">
+                    <div class="help-text">Used for notifications and account recovery</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="display-name" placeholder="How you want to appear to others">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Update Profile</button>
+            </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="profile-section">
+            <h3>🔒 Change Password</h3>
+            <form id="password-form">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="current-password" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="new-password" required>
+                        <div id="password-strength" class="password-strength"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-danger">Change Password</button>
+            </form>
+        </div>
+
+        <!-- Gotify Notifications -->
+        <div class="profile-section">
+            <h3>🔔 Gotify Notifications</h3>
+            <form id="gotify-form">
+                <div class="form-group">
+                    <label>Gotify Server URL</label>
+                    <input type="url" id="gotify-url" placeholder="https://your-gotify-server.com">
+                    <div class="help-text">URL of your Gotify server (include https://)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Gotify App Token</label>
+                    <input type="text" id="gotify-token" placeholder="Your app token">
+                    <div class="help-text">Application token from your Gotify server</div>
+                </div>
+                
+                <button type="submit" class="btn btn-success">Update Notifications</button>
+            </form>
+        </div>
+
+        <!-- Preferences -->
+        <div class="profile-section">
+            <h3>⚙️ Preferences</h3>
+            <form id="preferences-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Theme</label>
+                        <select id="theme">
+                            <option value="default">Default</option>
+                            <option value="dark">Dark Mode</option>
+                            <option value="light">Light Mode</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notifications</label>
+                        <select id="notifications-enabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Preferences</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="profile.js"></script>
+</body>
+</html>
