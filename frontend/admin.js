@@ -717,6 +717,17 @@ async function saveRewardsSilently() {
     }
 }
 
+// Save rewards with success message (for manual save button)
+async function saveRewards() {
+    try {
+        await saveRewardsSilently();
+        showAlert('Belohnungen erfolgreich gespeichert!', 'success');
+    } catch (error) {
+        console.error('Error saving rewards:', error);
+        showAlert('Fehler beim Speichern der Belohnungen: ' + error.message, 'error');
+    }
+}
+
 // Add new reward
 async function addReward() {
     try {

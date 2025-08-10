@@ -423,17 +423,23 @@ app.put('/api/admin/config/:key', requireAdmin, (req, res) => {
 
 // Get all rewards
 app.get('/api/admin/rewards', requireAdmin, (req, res) => {
+  console.log('Admin rewards endpoint accessed from:', req.ip);
   rewardsDb.all('SELECT * FROM rewards ORDER BY type, name', (err, rewards) => {
     if (err) {
       console.error('Get rewards error:', err);
-      return res.status(500).json({ error: 'Failed to get rewards' });
+      console.error('Database path:', rewardsDb.filename);
+      return res.status(500).json({ error: 'Failed to get rewards', details: err.message });
     }
+    console.log('Found', rewards.length, 'rewards');
     res.json(rewards);
   });
 });
 
 // Create new reward
 app.post('/api/admin/rewards', requireAdmin, (req, res) => {
+  console.log('Create reward endpoint accessed from:', req.ip);
+  console.log('Request body:', req.body);
+  
   const { name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, icon, color } = req.body;
   
   const sql = `INSERT INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, icon, color, created_by) 
