@@ -20,6 +20,56 @@ const notificationsDb = new sqlite3.Database(path.join(__dirname, 'notifications
 const rewardsDb = new sqlite3.Database(path.join(__dirname, 'rewards.db'), (err) => {
   if (err) throw err;
   console.log('Connected to rewards.db (SQLite)');
+  
+  // Ensure rewards table exists
+  rewardsDb.run(`CREATE TABLE IF NOT EXISTS rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('bonus', 'milestone', 'achievement')),
+    description TEXT,
+    bonus_exp INTEGER DEFAULT 0,
+    requirement_count INTEGER DEFAULT 1,
+    is_repeatable BOOLEAN DEFAULT FALSE,
+    is_one_time BOOLEAN DEFAULT TRUE,
+    icon TEXT DEFAULT '🎯',
+    color TEXT DEFAULT '#FFD700',
+    active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER,
+    FOREIGN KEY (created_by) REFERENCES users (id)
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating rewards table:', err);
+    } else {
+      console.log('Rewards table ready');
+      
+      // Insert default rewards if table is empty
+      rewardsDb.get('SELECT COUNT(*) as count FROM rewards', (err, result) => {
+        if (!err && result.count === 0) {
+          console.log('Inserting default rewards...');
+          const defaultRewards = [
+            ['Früher Vogel', 'bonus', 'Aufgabe vor Fälligkeit erledigt', 10, 1, 1, '🌅'],
+            ['Perfektionist', 'bonus', 'Aufgabe mit höchster Qualität abgeschlossen', 15, 1, 1, '⭐'],
+            ['Blitzschnell', 'bonus', 'Aufgabe in unter 30 Minuten erledigt', 20, 1, 1, '⚡'],
+            ['Fleißig', 'milestone', '10 Aufgaben abgeschlossen', 50, 10, 1, '💪'],
+            ['Produktiv', 'milestone', '25 Aufgaben abgeschlossen', 100, 25, 1, '🔥'],
+            ['Unaufhaltsam', 'milestone', '50 Aufgaben abgeschlossen', 200, 50, 1, '🚀'],
+            ['Erste Aufgabe', 'achievement', 'Deine allererste Aufgabe erledigt', 25, 1, 0, '🎯'],
+            ['Level 5 erreicht', 'achievement', 'Du hast Level 5 erreicht!', 100, 1, 0, '🏅'],
+            ['Eine Woche aktiv', 'achievement', '7 Tage in Folge Aufgaben erledigt', 150, 1, 0, '📅']
+          ];
+          
+          const stmt = rewardsDb.prepare('INSERT OR IGNORE INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, icon) VALUES (?, ?, ?, ?, ?, ?, ?)');
+          defaultRewards.forEach(reward => {
+            stmt.run(reward);
+          });
+          stmt.finalize();
+          console.log('Default rewards inserted');
+        }
+      });
+    }
+  });
 });
 
 // Create notifications table
