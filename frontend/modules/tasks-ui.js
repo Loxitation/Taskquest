@@ -126,7 +126,7 @@ function formatMinutesVerbose(minutes) {
 }
 
 // Render the task list for the selected player and filter
-export function renderTasksUI(playerId, filter) {
+export function renderTasksUI(playerId, filter, showTaskDetails = false) {
   const list = document.getElementById('task-list');
   if (!list) return;
   // --- Sorting controls ---
@@ -182,7 +182,12 @@ export function renderTasksUI(playerId, filter) {
       const note = localStorage.getItem(getNoteKey(task.id)) || '';
       // Fix type comparison for ownership check
       const isOwner = (String(task.player) === String(playerId) || String(task.playerId) === String(playerId));
-      const isApprover = (String(task.approver) === String(playerId));
+      const isApprover = !isOwner && (String(task.approver) === String(playerId) || task.approver === '__anyone__');
+      
+      // Privacy filter: Hide task details for other players if showTaskDetails is false
+      // Always show details if task is submitted (for approval) or if user is owner/approver
+      const canViewDetails = isOwner || isApprover || showTaskDetails || task.status === 'submitted';
+      
       const approverOptions = `<option value="__anyone__">Jeder darf bestätigen</option>` +
         players.filter(p => p.id !== task.player).map(p => `<option value="${p.id}"${task.approver===p.id?' selected':''}>${p.name}</option>`).join('');
       let approverDropdown = '';
@@ -210,6 +215,21 @@ export function renderTasksUI(playerId, filter) {
       const notesDisabled = !isOwner || locked ? 'disabled' : '';
       const diffDisabled = !isOwner || locked ? 'disabled' : '';
       const urgDisabled = !isOwner || locked ? 'disabled' : '';
+      
+      // If cannot view details, show minimal information
+      if (!canViewDetails) {
+        const ownerName = (players.find(p => p.id === task.player) || {}).name || 'Spieler';
+        return `
+          <li class="task-card task-private" data-taskid="${task.id}">
+            <div class="task-title">${task.name}</div>
+            <div class="task-owner">👤 ${ownerName}</div>
+            <div class="task-privacy-notice">
+              🔒 Private Aufgabe - Details ausgeblendet
+            </div>
+          </li>
+        `;
+      }
+      
       // Always show the creator's notes for all users
       const noteField = `<textarea class="task-note" placeholder="Fortschritt, Ideen, ToDos..." ${notesDisabled} style="max-height:4.2em;min-height:2.5em;overflow-y:auto;">${note}</textarea>`;
       // Only show the notes input field for the owner
@@ -237,9 +257,13 @@ export function renderTasksUI(playerId, filter) {
       // Improved dropdowns for difficulty and urgency
       const difficultyOptions = [1,2,3,4,5].map(n => `<option value="${n}"${task.difficulty==n?' selected':''}>S${n}</option>`).join('');
       const urgencyOptions = [1,2,3,4,5].map(n => `<option value="${n}"${task.urgency==n?' selected':''}>D${n}${n==5?' (Dringend)':''}</option>`).join('');
+      // Format created date
+      const createdDate = task.added ? new Date(task.added).toLocaleDateString('de-DE') : '-';
+      
       return `
         <li class="task-card" data-taskid="${task.id}">
           <div class="task-title">${task.name}</div>
+          <div class="task-meta-info" style="font-size:0.85em;color:#aaa;margin-bottom:0.5rem;">Erstellt am: ${createdDate}</div>
           <div class="task-select-row">
             <select class="difficulty-select styled-select" ${diffDisabled}>${difficultyOptions}</select>
             <select class="urgency-select styled-select" ${urgDisabled}>${urgencyOptions}</select>
@@ -311,13 +335,17 @@ export function renderTasksUI(playerId, filter) {
         } else {
           ratingStars = '-';
         }
-        let expStr = task.exp ? `<span style="color:#4CAF50;font-weight:bold;">(+${task.exp} EXP)</span>` : '';
+        let expStr = task.exp ? `<span style="color:#4CAF50;font-weight:bold;">(+${task.exp} XP)</span>` : '';
         const approverName = task.approver && task.approver !== '__anyone__' ? 
           (players.find(p => String(p.id) === String(task.approver)) || {}).name || 'Unbekannt' : 
           (task.confirmedBy ? (players.find(p => String(p.id) === String(task.confirmedBy)) || {}).name || 'Unbekannt' : '-');
+        
+        // Format created date
+        const createdDate = task.added ? new Date(task.added).toLocaleDateString('de-DE') : '-';
+        
         return `<div class="task-archive-card" style="border:2px solid #888;padding:1rem;margin-bottom:1.2rem;border-radius:12px;background:#232526;">
           <div style="font-weight:bold;">${task.name}</div>
-          <div>S${task.difficulty || '-'} / D${task.urgency || '-'} | Abgeschlossen am: ${task.completedAt ? new Date(task.completedAt).toLocaleString() : '-'} | Zeit: ${timeStr} | Bewertung: ${ratingStars} ${expStr}</div>
+          <div>Erstellt am: ${createdDate} | S${task.difficulty || '-'} / D${task.urgency || '-'} | Abgeschlossen am: ${task.completedAt ? new Date(task.completedAt).toLocaleString() : '-'} | Zeit: ${timeStr} | Bewertung: ${ratingStars} ${expStr}</div>
           <div>Genehmigt von: <b>${approverName}</b></div>
           <div><b>Notizen von ${(players.find(p => String(p.id) === String(task.player)) || {}).name || 'Spieler'}:</b><br><span class="commentary-text">${task.commentary || ''}</span></div>
           ${task.answerCommentary ? (() => {
@@ -337,11 +365,11 @@ export function renderTasksUI(playerId, filter) {
   if (sortBySel && sortDirSel) {
     sortBySel.onchange = () => {
       window.taskSortBy = sortBySel.value;
-      renderTasksUI(playerId, filter);
+      renderTasksUI(playerId, filter, showTaskDetails);
     };
     sortDirSel.onchange = () => {
       window.taskSortDir = sortDirSel.value;
-      renderTasksUI(playerId, filter);
+      renderTasksUI(playerId, filter, showTaskDetails);
     };
   }
   // Optimized: batch query all .task-card elements and set up listeners in one pass
@@ -508,8 +536,8 @@ export function renderTasksUI(playerId, filter) {
     // Re-render UI after updates to show latest data for all users
     [noteEl, minInput, dueInput].forEach(el => {
       if (el) {
-        el.addEventListener('change', () => setTimeout(() => renderTasksUI(playerId, filter), 300));
-        el.addEventListener('blur', () => setTimeout(() => renderTasksUI(playerId, filter), 300));
+        el.addEventListener('change', () => setTimeout(() => renderTasksUI(playerId, filter, showTaskDetails), 300));
+        el.addEventListener('blur', () => setTimeout(() => renderTasksUI(playerId, filter, showTaskDetails), 300));
       }
     });
   }

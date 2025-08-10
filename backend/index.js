@@ -6,7 +6,7 @@ const path = require('path');
 const http = require('http');
 const session = require('express-session');
 const { Server } = require('socket.io');
-const { sendGotify, getGotifyTargetForUser } = require('./gotify');
+const { sendGotify, getGotifyTargetForUser, getAllGotifyTargets } = require('./gotify');
 const { tasksDb, createTasksTable } = require('./tasks.db.js');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -174,7 +174,8 @@ async function validateAndMigrateDatabase() {
       is_active: 'INTEGER DEFAULT 1',
       exp: 'INTEGER DEFAULT 0',
       claimed_rewards: 'TEXT DEFAULT \'[]\'',
-      player_settings: 'TEXT DEFAULT \'{}\''
+      player_settings: 'TEXT DEFAULT \'{}\'',
+      notification_preferences: 'TEXT DEFAULT \'{"content": {"taskName": true, "timeWorked": true, "playerName": true, "difficulty": false, "urgency": false, "dueDate": false, "taskNote": false, "commentary": false, "rating": true, "expGained": true}, "types": {"taskSubmission": true, "taskApproval": true, "taskDecline": true, "levelUp": true, "rewardRedeemed": true, "newTask": false, "reminders": true}, "reminders": {"enabled": false, "dailyTime": "08:00", "dueDateWarning": true, "dueDateDays": 1, "frequency": "once", "weekdays": {"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": false, "sunday": false}}, "privacy": {"showOtherPlayersTasks": false, "showPlayerStats": true, "showNotificationPreviews": true}}\''
     },
     admin_config: {
       id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
@@ -425,25 +426,93 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
       email: user.email,
       profile_settings: user.profile_settings ? JSON.parse(user.profile_settings) : {},
       gotify_url: user.gotify_url,
-      gotify_token: user.gotify_token
+      gotify_token: user.gotify_token,
+      notification_preferences: user.notification_preferences ? JSON.parse(user.notification_preferences) : {
+        includeTaskName: true,
+        includeTimeWorked: true,
+        includePlayerName: true,
+        includeTaskDetails: false
+      }
     });
   });
 });
 
 // Update user profile
 app.put('/api/auth/profile', requireAuth, (req, res) => {
-  const { gotify_url, gotify_token, profile_settings } = req.body;
+  const { gotify_url, gotify_token, profile_settings, notification_preferences } = req.body;
   
   updateUserProfile(req.session.userId, {
     gotify_url,
     gotify_token,
-    profile_settings
+    profile_settings,
+    notification_preferences
   }, (err) => {
     if (err) {
       console.error('Profile update error:', err);
       return res.status(500).json({ error: 'Failed to update profile' });
     }
     res.json({ success: true });
+  });
+});
+
+// Test Gotify notification
+app.post('/api/auth/test-notification', requireAuth, (req, res) => {
+  const { message, contentPreferences } = req.body;
+  
+  getGotifyTargetForUser(req.session.userId, (target) => {
+    if (!target) {
+      return res.status(400).json({ error: 'Gotify settings not configured. Please set up your Gotify server URL and token first.' });
+    }
+    
+    // Create a comprehensive test task that demonstrates all possible content
+    const testTask = {
+      id: 999,
+      name: 'Test-Aufgabe für Benachrichtigungs-Demo',
+      difficulty: 3,
+      urgency: 2,
+      minutesWorked: 42,
+      dueDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0], // Tomorrow
+      note: 'Dies ist eine Beispiel-Notiz für die Test-Aufgabe.',
+      answerCommentary: 'Sehr gute Arbeit! Diese Aufgabe wurde ausgezeichnet erledigt.',
+      player: req.session.userId,
+      status: 'done'
+    };
+    
+    const testOwner = {
+      id: req.session.userId,
+      username: req.session.username
+    };
+    
+    const testApprover = 'Test-Genehmiger';
+    const testRating = 4;
+    const testExpGained = 85;
+    
+    // Use the actual buildTaskNotificationMessage function to create test content
+    let testMessage = 'Dies ist eine Test-Benachrichtigung von TaskQuest!';
+    testMessage += '\n🧪 Vorschau Ihrer Benachrichtigungs-Einstellungen:';
+    
+    // Build message using the same logic as real notifications
+    const notificationContent = buildTaskNotificationMessage(
+      testTask, 
+      testOwner, 
+      contentPreferences, 
+      testApprover, 
+      testRating, 
+      testExpGained
+    );
+    
+    if (notificationContent.trim()) {
+      testMessage += notificationContent;
+    } else {
+      testMessage += '\n\n❌ Keine Inhalte ausgewählt - Sie würden leere Benachrichtigungen erhalten!';
+      testMessage += '\n💡 Tipp: Aktivieren Sie mindestens eine Inhalts-Option in Ihren Einstellungen.';
+    }
+    
+    testMessage += '\n\n✅ Falls Sie diese Nachricht erhalten, funktioniert Ihr Gotify-Setup korrekt!';
+    testMessage += '\n📋 Dies zeigt genau, was Sie in echten Benachrichtigungen sehen würden.';
+    
+    sendGotify('🧪 TaskQuest Test-Benachrichtigung', testMessage, [target], 5);
+    res.json({ success: true, message: 'Test notification sent with your current preferences!' });
   });
 });
 
@@ -566,48 +635,69 @@ app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const userId = parseInt(req.params.id);
   const { role, email, is_active } = req.body;
   
-  // Build update query dynamically based on provided fields
-  const updates = [];
-  const values = [];
-  
-  if (role !== undefined) {
-    updates.push('role = ?');
-    values.push(role);
-  }
-  if (email !== undefined) {
-    updates.push('email = ?');
-    values.push(email);
-  }
-  if (is_active !== undefined) {
-    updates.push('is_active = ?');
-    values.push(is_active ? 1 : 0);
-  }
-  
-  if (updates.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update' });
+  // Only allow core admin (user ID 1) to remove admin rights
+  if (role === 'user' && req.user.id !== 1) {
+    // Check if target user is admin
+    authDb.get('SELECT role FROM users WHERE id = ?', [userId], (err, user) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (user && user.role === 'admin') {
+        return res.status(403).json({ error: 'Nur der Core-Administrator (User ID 1) kann Admin-Rechte entziehen.' });
+      }
+      // Continue with normal update process
+      performUpdate();
+    });
+    return;
   }
   
-  values.push(userId);
-  const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+  // Continue with update if no restrictions apply
+  performUpdate();
   
-  authDb.run(sql, values, function(err) {
-    if (err) {
-      console.error('Update user error:', err);
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+  function performUpdate() {
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
     
-    // If role was updated, update any active sessions for this user
     if (role !== undefined) {
-      // Note: In a production app, you'd want to track sessions in a database
-      // For now, we'll let the user refresh their session by re-logging in
-      console.log(`User ${userId} role updated to ${role}. User should refresh their session.`);
+      updates.push('role = ?');
+      values.push(role);
+    }
+    if (email !== undefined) {
+      updates.push('email = ?');
+      values.push(email);
+    }
+    if (is_active !== undefined) {
+      updates.push('is_active = ?');
+      values.push(is_active ? 1 : 0);
     }
     
-    res.json({ success: true });
-  });
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+    
+    values.push(userId);
+    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+    
+    authDb.run(sql, values, function(err) {
+      if (err) {
+        console.error('Update user error:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // If role was updated, update any active sessions for this user
+      if (role !== undefined) {
+        // Note: In a production app, you'd want to track sessions in a database
+        // For now, we'll let the user refresh their session by re-logging in
+        console.log(`User ${userId} role updated to ${role}. User should refresh their session.`);
+      }
+      
+      res.json({ success: true });
+    });
+  }
 });
 
 // Get admin configuration
@@ -749,6 +839,57 @@ app.delete('/api/admin/rewards/:id', requireAdmin, (req, res) => {
   });
 });
 
+// Reset entire application (DANGEROUS)
+app.post('/api/reset', requireAdmin, (req, res) => {
+  console.log('🚨 APPLICATION RESET INITIATED by admin:', req.session.username);
+  
+  try {
+    // Clear all tasks (which will automatically reset XP and levels since they're calculated from tasks)
+    tasksDb.run('DELETE FROM tasks', [], function(err) {
+      if (err) {
+        console.error('Error clearing tasks:', err);
+        return res.status(500).json({ error: 'Failed to clear tasks' });
+      }
+      
+      console.log(`✅ Cleared ${this.changes} tasks`);
+      
+      // Reset all user XP and stats (this might be redundant if calculated from tasks, but ensures clean state)
+      authDb.run('UPDATE users SET exp = 0, claimed_rewards = "[]" WHERE id != 1', [], function(err) {
+        if (err) {
+          console.error('Error resetting user stats:', err);
+          return res.status(500).json({ error: 'Failed to reset user stats' });
+        }
+        
+        console.log(`✅ Reset stats for ${this.changes} users`);
+        
+        // Clear rewards database 
+        rewardsDb.run('DELETE FROM rewards', [], function(err) {
+          if (err) {
+            console.error('Error clearing rewards:', err);
+            return res.status(500).json({ error: 'Failed to clear rewards' });
+          }
+          
+          console.log(`✅ Cleared ${this.changes} rewards`);
+          
+          // Emit data changed to refresh all connected clients
+          emitDataChanged();
+          
+          console.log('🎯 APPLICATION RESET COMPLETED SUCCESSFULLY');
+          res.json({ 
+            success: true, 
+            message: 'Application reset completed successfully. All tasks, user progress, and rewards have been cleared.',
+            resetBy: req.session.username,
+            timestamp: new Date().toISOString()
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Critical error during application reset:', error);
+    res.status(500).json({ error: 'Critical error during reset: ' + error.message });
+  }
+});
+
 // Test route to verify system status
 app.get('/api/system/status', requireAuth, (req, res) => {
   res.json({
@@ -846,6 +987,553 @@ function emitNotification(notification) {
   io.emit('notification', notification); // Real-time to all clients
 }
 
+// Helper to build task notification message based on user preferences
+function buildTaskNotificationMessage(task, owner, contentPrefs, approver, rating, expGained, actionType = null) {
+  let message = '';
+  
+  if (contentPrefs?.taskName !== false && task.name) {
+    message += `\n📋 Aufgabe: ${task.name}`;
+  }
+  
+  if (contentPrefs?.playerName !== false && owner?.username) {
+    message += `\n👤 ${approver ? 'Eingereicht von' : 'Spieler'}: ${owner.username}`;
+  }
+  
+  if (approver && contentPrefs?.playerName !== false) {
+    let approverLabel;
+    if (actionType === 'decline') {
+      approverLabel = 'Abgelehnt von';
+    } else {
+      approverLabel = rating ? 'Genehmigt von' : 'Bearbeitet von';
+    }
+    message += `\n👤 ${approverLabel}: ${approver}`;
+  }
+  
+  if (contentPrefs?.timeWorked !== false && task.minutesWorked) {
+    message += `\n⏱️ Zeit gearbeitet: ${task.minutesWorked} Minuten`;
+  }
+  
+  if (contentPrefs?.difficulty !== false && task.difficulty) {
+    message += `\n🎯 Schwierigkeit: ${task.difficulty}/5`;
+  }
+  
+  if (contentPrefs?.urgency !== false && task.urgency) {
+    message += `\n🔥 Dringlichkeit: ${task.urgency}/5`;
+  }
+  
+  if (contentPrefs?.dueDate !== false && task.dueDate) {
+    const dueDate = new Date(task.dueDate).toLocaleDateString('de-DE');
+    message += `\n📅 Fällig: ${dueDate}`;
+  }
+  
+  if (contentPrefs?.taskNote !== false && task.note && task.note.trim()) {
+    message += `\n📝 Notiz: ${task.note}`;
+  }
+  
+  if (contentPrefs?.rating !== false && rating) {
+    message += `\n⭐ Bewertung: ${rating}/5`;
+  }
+  
+  if (contentPrefs?.commentary !== false && task.answerCommentary && task.answerCommentary.trim()) {
+    message += `\n💬 Kommentar: ${task.answerCommentary}`;
+  }
+  
+  if (contentPrefs?.expGained !== false && expGained) {
+    message += `\n🎮 EXP erhalten: ${expGained}`;
+  }
+  
+  return message;
+}
+
+// Helper to check for level up and send notifications
+function checkForLevelUp(userId, oldExp, newExp) {
+  const ranks = [
+    { level: 1, title: "Neuling", minExp: 0 },
+    { level: 2, title: "Lehrling", minExp: 50 },
+    { level: 3, title: "Handwerker", minExp: 150 },
+    { level: 4, title: "Fachmann", minExp: 300 },
+    { level: 5, title: "Experte", minExp: 500 },
+    { level: 6, title: "Meister", minExp: 750 },
+    { level: 7, title: "Großmeister", minExp: 1100 },
+    { level: 8, title: "Virtuose", minExp: 1500 },
+    { level: 9, title: "Legende", minExp: 2000 },
+    { level: 10, title: "Mythisch", minExp: 2600 }
+  ];
+  
+  const oldLevel = ranks.filter(r => r.minExp <= oldExp).pop()?.level || 1;
+  const newLevel = ranks.filter(r => r.minExp <= newExp).pop()?.level || 1;
+  
+  if (newLevel > oldLevel) {
+    const newRank = ranks.find(r => r.level === newLevel);
+    sendLevelUpNotification(userId, newLevel, newRank?.title || 'Unbekannt');
+  }
+}
+
+// Helper to send level up notifications
+function sendLevelUpNotification(userId, newLevel, rankTitle) {
+  // Get user details
+  authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [userId], (err, user) => {
+    if (err || !user) return;
+    
+    // Send to all users who want level up notifications
+    authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1', [], (err, users) => {
+      if (err || !users) return;
+      
+      users.forEach(targetUser => {
+        if (!targetUser.gotify_url || !targetUser.gotify_token) return;
+        
+        const prefs = targetUser.notification_preferences ? JSON.parse(targetUser.notification_preferences) : {
+          types: { levelUp: true }
+        };
+        
+        // Check if user wants level up notifications
+        if (prefs.types?.levelUp === false) return;
+        
+        const target = { url: targetUser.gotify_url, token: targetUser.gotify_token };
+        const title = targetUser.id === userId ? '🎉 Level aufgestiegen!' : '🎉 Jemand ist aufgestiegen!';
+        let message = targetUser.id === userId 
+          ? `Glückwunsch! Du hast Level ${newLevel} erreicht!`
+          : `${user.username} hat Level ${newLevel} erreicht!`;
+        
+        message += `\n🏆 Neuer Rang: ${rankTitle}`;
+        message += `\n🎮 Level: ${newLevel}`;
+        
+        sendGotify(title, message, [target], 6);
+      });
+    });
+  });
+}
+
+// Helper to send reward redemption notifications
+function sendRewardRedemptionNotification(userId, rewardName, rewardDescription) {
+  // Get user details
+  authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [userId], (err, user) => {
+    if (err || !user) return;
+    
+    // Send to all users who want reward notifications
+    authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1', [], (err, users) => {
+      if (err || !users) return;
+      
+      users.forEach(targetUser => {
+        if (!targetUser.gotify_url || !targetUser.gotify_token) return;
+        
+        const prefs = targetUser.notification_preferences ? JSON.parse(targetUser.notification_preferences) : {
+          types: { rewardRedeemed: true }
+        };
+        
+        // Check if user wants reward redemption notifications
+        if (prefs.types?.rewardRedeemed === false) return;
+        
+        const target = { url: targetUser.gotify_url, token: targetUser.gotify_token };
+        const title = targetUser.id === userId ? '🏆 Belohnung eingelöst!' : '🏆 Belohnung eingelöst!';
+        let message = targetUser.id === userId 
+          ? `Du hast eine Belohnung eingelöst!`
+          : `${user.username} hat eine Belohnung eingelöst!`;
+        
+        message += `\n🎁 Belohnung: ${rewardName}`;
+        if (rewardDescription) {
+          message += `\n📄 ${rewardDescription}`;
+        }
+        
+        sendGotify(title, message, [target], 5);
+      });
+    });
+  });
+}
+
+// Task reminder system
+const taskReminderIntervals = new Map();
+
+function startTaskReminderSystem() {
+  console.log('🔔 Starting task reminder system...');
+  
+  // Check reminders every hour
+  const reminderChecker = setInterval(() => {
+    checkTaskReminders();
+  }, 60 * 60 * 1000); // Every hour
+  
+  // Initial check
+  setTimeout(checkTaskReminders, 5000);
+}
+
+function checkTaskReminders() {
+  // Get all users with reminder preferences
+  authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1', [], (err, users) => {
+    if (err || !users) return;
+    
+    users.forEach(user => {
+      if (!user.gotify_url || !user.gotify_token) return;
+      
+      const prefs = user.notification_preferences ? JSON.parse(user.notification_preferences) : {};
+      const reminderSettings = prefs.reminders || { enabled: false };
+      
+      if (!reminderSettings.enabled || prefs.types?.reminders === false) return;
+      
+      checkUserTaskReminders(user, reminderSettings, prefs.content || {});
+    });
+  });
+}
+
+function checkUserTaskReminders(user, reminderSettings, contentPrefs) {
+  const now = new Date();
+  const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const target = { url: user.gotify_url, token: user.gotify_token };
+  
+  // Map day numbers to weekday names
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const currentDayName = dayNames[currentDay];
+  
+  // Check if today is enabled for reminders
+  const weekdays = reminderSettings.weekdays || {
+    monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+    saturday: false, sunday: false
+  };
+  
+  const isDayEnabled = weekdays[currentDayName] !== false;
+  
+  // Daily reminder check
+  if (reminderSettings.dailyTime && currentTime === reminderSettings.dailyTime && isDayEnabled) {
+    // Get user's open tasks
+    tasksDb.all('SELECT * FROM tasks WHERE player = ? AND status = "open" AND archived = 0', [user.id], (err, tasks) => {
+      if (err || !tasks || tasks.length === 0) return;
+      
+      const title = '📋 Tägliche Aufgaben-Erinnerung';
+      let message = `Du hast ${tasks.length} offene Aufgabe(n):`;
+      
+      tasks.slice(0, 5).forEach(task => {
+        message += `\n• ${task.name}`;
+        if (contentPrefs.dueDate && task.dueDate) {
+          const dueDate = new Date(task.dueDate).toLocaleDateString('de-DE');
+          message += ` (fällig: ${dueDate})`;
+        }
+        if (contentPrefs.difficulty && task.difficulty) {
+          message += ` [${task.difficulty}/5]`;
+        }
+      });
+      
+      if (tasks.length > 5) {
+        message += `\n... und ${tasks.length - 5} weitere`;
+      }
+      
+      sendGotify(title, message, [target], 4);
+    });
+  }
+  
+  // Due date warning check
+  if (reminderSettings.dueDateWarning) {
+    const warningDays = reminderSettings.dueDateDays || 1;
+    const warningDate = new Date();
+    warningDate.setDate(warningDate.getDate() + warningDays);
+    
+    tasksDb.all(
+      'SELECT * FROM tasks WHERE player = ? AND status = "open" AND archived = 0 AND dueDate IS NOT NULL AND dueDate != ""', 
+      [user.id], 
+      (err, tasks) => {
+        if (err || !tasks) return;
+        
+        const dueSoonTasks = tasks.filter(task => {
+          const dueDate = new Date(task.dueDate);
+          return dueDate <= warningDate && dueDate >= now;
+        });
+        
+        if (dueSoonTasks.length === 0) return;
+        
+        const title = '⏰ Aufgaben werden bald fällig!';
+        let message = `${dueSoonTasks.length} Aufgabe(n) werden in den nächsten ${warningDays} Tag(en) fällig:`;
+        
+        dueSoonTasks.forEach(task => {
+          const dueDate = new Date(task.dueDate).toLocaleDateString('de-DE');
+          message += `\n• ${task.name} (fällig: ${dueDate})`;
+          if (contentPrefs.urgency && task.urgency) {
+            message += ` [Dringlichkeit: ${task.urgency}/5]`;
+          }
+        });
+        
+        sendGotify(title, message, [target], 7);
+      }
+    );
+  }
+  
+  // Overdue task reminders based on frequency
+  if (reminderSettings.frequency && reminderSettings.frequency !== 'once') {
+    tasksDb.all(
+      'SELECT * FROM tasks WHERE player = ? AND status = "open" AND archived = 0 AND dueDate IS NOT NULL AND dueDate != ""', 
+      [user.id], 
+      (err, tasks) => {
+        if (err || !tasks) return;
+        
+        const overdueTasks = tasks.filter(task => {
+          const dueDate = new Date(task.dueDate);
+          return dueDate < now;
+        });
+        
+        if (overdueTasks.length === 0) return;
+        
+        // Check if we should send reminder based on frequency
+        let shouldSend = false;
+        const frequency = reminderSettings.frequency;
+        
+        if (frequency === 'daily') {
+          shouldSend = isDayEnabled; // Send daily if today is enabled
+        } else if (frequency === 'every-other-day') {
+          // Send every other day (simple logic based on day of month)
+          shouldSend = isDayEnabled && (now.getDate() % 2 === 0);
+        }
+        
+        if (!shouldSend) return;
+        
+        const title = '🔴 Überfällige Aufgaben!';
+        let message = `Sie haben ${overdueTasks.length} überfällige Aufgabe(n):`;
+        
+        overdueTasks.forEach(task => {
+          const dueDate = new Date(task.dueDate);
+          const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
+          const dueDateStr = dueDate.toLocaleDateString('de-DE');
+          
+          message += `\n• ${task.name} (fällig: ${dueDateStr}, ${daysOverdue} Tag(e) überfällig)`;
+          if (contentPrefs.urgency && task.urgency) {
+            message += ` [Dringlichkeit: ${task.urgency}/5]`;
+          }
+        });
+        
+        sendGotify(title, message, [target], 9); // High priority for overdue
+      }
+    );
+  }
+}
+
+// Helper to send Gotify notification for task submission
+function sendTaskSubmissionNotification(task) {
+  // Get task owner details
+  authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [task.player || task.playerId], (err, owner) => {
+    if (err || !owner) return;
+    
+    const approver = task.approver;
+    
+    if (approver === '__anyone__') {
+      // Send to all active users except the task owner
+      authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1 AND id != ?', [task.player || task.playerId], (err, users) => {
+        if (err || !users || users.length === 0) return;
+        
+        users.forEach(user => {
+          if (!user.gotify_url || !user.gotify_token) return;
+          
+          const prefs = user.notification_preferences ? JSON.parse(user.notification_preferences) : {
+            content: {}, types: { taskSubmission: true }
+          };
+          
+          // Check if user wants task submission notifications
+          if (prefs.types?.taskSubmission === false) return;
+          
+          const target = { url: user.gotify_url, token: user.gotify_token };
+          const title = '📋 Neue Aufgabe zur Genehmigung';
+          let message = `Eine neue Aufgabe wartet auf Genehmigung!`;
+          
+          // Build message based on user preferences
+          message += buildTaskNotificationMessage(task, owner, prefs.content, null, null, null);
+          
+          sendGotify(title, message, [target], 7);
+        });
+      });
+    } else {
+      // Send to specific approver
+      authDb.get('SELECT gotify_url, gotify_token, notification_preferences FROM users WHERE id = ? AND is_active = 1', [approver], (err, approverUser) => {
+        if (err || !approverUser || !approverUser.gotify_url || !approverUser.gotify_token) return;
+        
+        const prefs = approverUser.notification_preferences ? JSON.parse(approverUser.notification_preferences) : {
+          content: {}, types: { taskSubmission: true }
+        };
+        
+        // Check if user wants task submission notifications
+        if (prefs.types?.taskSubmission === false) return;
+        
+        const target = { url: approverUser.gotify_url, token: approverUser.gotify_token };
+        const title = '📋 Aufgabe zur Genehmigung';
+        let message = `Eine Aufgabe wartet auf Ihre Genehmigung!`;
+        
+        // Build message based on user preferences
+        message += buildTaskNotificationMessage(task, owner, prefs.content, null, null, null);
+        
+        sendGotify(title, message, [target], 7);
+      });
+    }
+  });
+}
+
+// Helper to send Gotify notification for task approval
+function sendTaskApprovalNotification(task, approverId, rating, commentary, expGained) {
+  const taskOwnerId = task.player || task.playerId;
+  
+  // Get task owner and approver details
+  authDb.get('SELECT gotify_url, gotify_token, notification_preferences FROM users WHERE id = ? AND is_active = 1', [taskOwnerId], (err, owner) => {
+    if (err || !owner || !owner.gotify_url || !owner.gotify_token) return;
+    
+    authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [taskOwnerId], (err, taskOwner) => {
+      if (err || !taskOwner) return;
+      
+      authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [approverId], (err, approver) => {
+        if (err || !approver) return;
+        
+        const prefs = owner.notification_preferences ? JSON.parse(owner.notification_preferences) : {
+          content: {}, types: { taskApproval: true }
+        };
+        
+        // Check if user wants task approval notifications
+        if (prefs.types?.taskApproval === false) return;
+        
+        const target = { url: owner.gotify_url, token: owner.gotify_token };
+        const title = '✅ Aufgabe genehmigt';
+        let message = `Ihre Aufgabe wurde genehmigt!`;
+        
+        // Build message based on user preferences - use correct task owner username
+        const ownerUser = { username: taskOwner.username };
+        const updatedTask = { ...task, answerCommentary: commentary };
+        message += buildTaskNotificationMessage(updatedTask, ownerUser, prefs.content, approver.username, rating, expGained);
+        
+        sendGotify(title, message, [target], 6);
+      });
+    });
+  });
+}
+
+// Helper to send Gotify notification for task decline
+function sendTaskDeclineNotification(task, declinerId) {
+  const taskOwnerId = task.player || task.playerId;
+  
+  // Get task owner and decliner details
+  authDb.get('SELECT gotify_url, gotify_token, notification_preferences FROM users WHERE id = ? AND is_active = 1', [taskOwnerId], (err, owner) => {
+    if (err || !owner || !owner.gotify_url || !owner.gotify_token) return;
+    
+    authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [taskOwnerId], (err, taskOwner) => {
+      if (err || !taskOwner) return;
+      
+      authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [declinerId], (err, decliner) => {
+        if (err || !decliner) return;
+        
+        const prefs = owner.notification_preferences ? JSON.parse(owner.notification_preferences) : {
+          content: {}, types: { taskDecline: true }
+        };
+        
+        // Check if user wants task decline notifications
+        if (prefs.types?.taskDecline === false) return;
+        
+        const target = { url: owner.gotify_url, token: owner.gotify_token };
+        const title = '❌ Aufgabe abgelehnt';
+        let message = `Ihre Aufgabe wurde abgelehnt und kann überarbeitet werden.`;
+        
+        // Build message for decline notification with correct labels
+        const ownerUser = { username: taskOwner.username };
+        message += buildTaskNotificationMessage(task, ownerUser, prefs.content, decliner.username, null, null, 'decline');
+        
+        sendGotify(title, message, [target], 5);
+      });
+    });
+  });
+}
+
+// Helper to check for level up and send notifications
+function checkForLevelUp(userId, oldExp, newExp) {
+  const ranks = [
+    { level: 1, title: "Neuling", minExp: 0, color: "#8B4513" },
+    { level: 2, title: "Lehrling", minExp: 50, color: "#A9A9A9" },
+    { level: 3, title: "Handwerker", minExp: 150, color: "#CD7F32" },
+    { level: 4, title: "Fachmann", minExp: 300, color: "#C0C0C0" },
+    { level: 5, title: "Experte", minExp: 500, color: "#FFD700" },
+    { level: 6, title: "Meister", minExp: 750, color: "#E6E6FA" },
+    { level: 7, title: "Großmeister", minExp: 1100, color: "#F0E68C" },
+    { level: 8, title: "Virtuose", minExp: 1500, color: "#DDA0DD" },
+    { level: 9, title: "Legende", minExp: 2000, color: "#20B2AA" },
+    { level: 10, title: "Mythisch", minExp: 2600, color: "#FF6347" }
+  ];
+  
+  const oldLevel = ranks.filter(r => r.minExp <= oldExp).pop()?.level || 1;
+  const newLevel = ranks.filter(r => r.minExp <= newExp).pop()?.level || 1;
+  
+  if (newLevel > oldLevel) {
+    const newRank = ranks.find(r => r.level === newLevel);
+    sendLevelUpNotification(userId, newLevel, newRank?.title || 'Unbekannt');
+  }
+}
+
+// Helper to send Gotify notification for level up
+function sendLevelUpNotification(userId, newLevel, rankTitle) {
+  // Get user details
+  authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [userId], (err, user) => {
+    if (err || !user) return;
+    
+    // Send to all active users (broadcast level up)
+    authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1', [], (err, users) => {
+      if (err || !users || users.length === 0) return;
+      
+      users.forEach(targetUser => {
+        if (!targetUser.gotify_url || !targetUser.gotify_token) return;
+        
+        const prefs = targetUser.notification_preferences ? JSON.parse(targetUser.notification_preferences) : {
+          content: {}, types: { levelUp: true }
+        };
+        
+        // Check if user wants level up notifications
+        if (prefs.types?.levelUp === false) return;
+        
+        const target = { url: targetUser.gotify_url, token: targetUser.gotify_token };
+        const isOwnLevelUp = targetUser.id === userId;
+        
+        const title = isOwnLevelUp ? '🎉 Level-Aufstieg!' : '🎉 Level-Aufstieg im Team!';
+        let message = isOwnLevelUp 
+          ? `Glückwunsch! Sie haben Level ${newLevel} erreicht!`
+          : `${user.username} hat Level ${newLevel} erreicht!`;
+        
+        message += `\n🏆 Rang: ${rankTitle}`;
+        
+        if (prefs.content?.playerName !== false && !isOwnLevelUp) {
+          // Player name already included in message for others
+        }
+        
+        sendGotify(title, message, [target], 8);
+      });
+    });
+  });
+}
+
+// Helper to send Gotify notification for reward redemption
+function sendRewardRedemptionNotification(userId, rewardName, rewardDescription) {
+  // Get user details
+  authDb.get('SELECT username FROM users WHERE id = ? AND is_active = 1', [userId], (err, user) => {
+    if (err || !user) return;
+    
+    // Send to all active users (broadcast reward redemption)
+    authDb.all('SELECT id, username, gotify_url, gotify_token, notification_preferences FROM users WHERE is_active = 1', [], (err, users) => {
+      if (err || !users || users.length === 0) return;
+      
+      users.forEach(targetUser => {
+        if (!targetUser.gotify_url || !targetUser.gotify_token) return;
+        
+        const prefs = targetUser.notification_preferences ? JSON.parse(targetUser.notification_preferences) : {
+          content: {}, types: { rewardRedeemed: true }
+        };
+        
+        // Check if user wants reward redemption notifications
+        if (prefs.types?.rewardRedeemed === false) return;
+        
+        const target = { url: targetUser.gotify_url, token: targetUser.gotify_token };
+        const isOwnRedemption = targetUser.id === userId;
+        
+        const title = isOwnRedemption ? '🏆 Belohnung eingelöst!' : '🏆 Belohnung im Team eingelöst!';
+        let message = isOwnRedemption 
+          ? `Sie haben eine Belohnung eingelöst: ${rewardName}`
+          : `${user.username} hat eine Belohnung eingelöst: ${rewardName}`;
+        
+        if (rewardDescription && rewardDescription.trim()) {
+          message += `\n📝 ${rewardDescription}`;
+        }
+        
+        sendGotify(title, message, [target], 6);
+      });
+    });
+  });
+}
+
 // GET alle Tasks
 app.get('/api/tasks', requireAuth, (req, res) => {
   tasksDb.all('SELECT * FROM tasks WHERE archived = 0', [], (err, rows) => {
@@ -884,7 +1572,8 @@ app.post('/api/mark-done/:id', requireAuth, (req, res) => {
         if (err2) return res.status(500).json({ error: err2.message });
         emitDataChanged();
         res.json({ success: true });
-      });
+      }
+    );
   });
 });
 
@@ -916,15 +1605,35 @@ app.patch('/api/tasks/:id', (req, res) => {
   values.push(taskId);
   // Debug log
   console.log('PATCH /api/tasks/:id', { updates, sql: `UPDATE tasks SET ${fields} WHERE id = ?`, values });
-  tasksDb.run(`UPDATE tasks SET ${fields} WHERE id = ?`, values, function (err) {
+  
+  // Get original task state before update for decline detection
+  tasksDb.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, originalTask) => {
     if (err) {
-      console.error('SQL error:', err);
+      console.error('Error getting original task:', err);
       return res.status(500).json({ error: err.message });
     }
-    tasksDb.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err2, row) => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      emitDataChanged();
-      res.json({ success: true, task: row });
+    
+    tasksDb.run(`UPDATE tasks SET ${fields} WHERE id = ?`, values, function (err) {
+      if (err) {
+        console.error('SQL error:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      tasksDb.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err2, row) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        
+        // Send Gotify notification if task was submitted for approval
+        if (updates.status === 'submitted') {
+          sendTaskSubmissionNotification(row);
+        }
+        
+        // Send notification if task was declined (reset from submitted to open)
+        if (originalTask && originalTask.status === 'submitted' && updates.status === 'open') {
+          sendTaskDeclineNotification(row, req.session.userId);
+        }
+        
+        emitDataChanged();
+        res.json({ success: true, task: row });
+      });
     });
   });
 });
@@ -978,7 +1687,16 @@ app.post('/api/confirm/:id', requireAuth, (req, res) => {
           
           authDb.run('UPDATE users SET exp = ? WHERE id = ?', [currentExp, taskOwnerId], (err) => {
             if (err) console.error('Error updating user EXP:', err);
-            else console.log(`Added ${exp} EXP to user ${taskOwnerId}, total now: ${currentExp}`);
+            else {
+              console.log(`Added ${exp} EXP to user ${taskOwnerId}, total now: ${currentExp}`);
+              
+              // Check for level up
+              checkForLevelUp(taskOwnerId, user.exp || 0, currentExp);
+            }
+            
+            // Send Gotify notification to task owner about approval
+            sendTaskApprovalNotification(task, player, rating, answerCommentary, exp);
+            
             emitDataChanged();
             res.json({ success: true });
           });
@@ -991,7 +1709,7 @@ app.post('/api/confirm/:id', requireAuth, (req, res) => {
   });
 });
 
-// Calculate EXP based on admin configuration
+// Calculate XP based on admin configuration
 async function calculateTaskEXP(task) {
   return new Promise((resolve, reject) => {
     getAdminConfig((err, configs) => {
@@ -1202,4 +1920,9 @@ app.get('/profile.html', requireAuth, (req, res) => {
 });
 
 // Start server with socket.io
-server.listen(PORT, () => console.log(`Server läuft auf http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server läuft auf http://localhost:${PORT}`);
+  
+  // Start task reminder system
+  startTaskReminderSystem();
+});

@@ -162,10 +162,76 @@
         .strength-medium { color: #f59e0b; }
         .strength-strong { color: #10b981; }
 
+        .form-group label input[type="checkbox"] {
+            margin-right: 0.5rem;
+            width: auto;
+            padding: 0;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+        }
+
         @media (max-width: 768px) {
             .form-row {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* Weekday selector styles */
+        .weekday-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .weekday-selector label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #f9fafb;
+            transition: all 0.2s ease;
+        }
+
+        .weekday-selector label:hover {
+            background: #e5e7eb;
+        }
+
+        .weekday-selector input[type="checkbox"]:checked + * {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .weekday-selector input[type="checkbox"] {
+            margin: 0;
+        }
+
+        /* Conditional display for settings */
+        .settings-group {
+            margin-left: 1.5rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        /* Enhanced checkbox styling */
+        .notification-section input[type="checkbox"] {
+            margin-right: 0.5rem;
+            transform: scale(1.2);
+            accent-color: #3b82f6;
         }
     </style>
 </head>
@@ -249,21 +315,300 @@
 
         <!-- Gotify Notifications -->
         <div class="profile-section">
-            <h3>🔔 Gotify Notifications</h3>
+            <h3>🔔 Gotify-Benachrichtigungen</h3>
             <form id="gotify-form">
                 <div class="form-group">
                     <label>Gotify Server URL</label>
-                    <input type="url" id="gotify-url" placeholder="https://your-gotify-server.com">
-                    <div class="help-text">URL of your Gotify server (include https://)</div>
+                    <input type="url" id="gotify-url" placeholder="https://ihr-gotify-server.com">
+                    <div class="help-text">
+                        <strong>Wichtig:</strong> Nur die Basis-URL eingeben, <strong>OHNE</strong> "/message" am Ende!<br>
+                        Beispiel: <code>https://gotify.example.com</code> (nicht <code>https://gotify.example.com/message</code>)
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label>Gotify App Token</label>
-                    <input type="text" id="gotify-token" placeholder="Your app token">
-                    <div class="help-text">Application token from your Gotify server</div>
+                    <label>Gotify App-Token</label>
+                    <input type="text" id="gotify-token" placeholder="Ihr App-Token">
+                    <div class="help-text">Anwendungstoken von Ihrem Gotify-Server</div>
+                </div>
+
+                <div class="form-row">
+                    <button type="submit" class="btn btn-success">Benachrichtigungen aktualisieren</button>
+                    <button type="button" id="test-notification" class="btn btn-primary">Test-Benachrichtigung senden</button>
                 </div>
                 
-                <button type="submit" class="btn btn-success">Update Notifications</button>
+                <!-- Error/Success Messages for Gotify -->
+                <div id="gotify-messages" style="margin-top: 1rem;"></div>
+            </form>
+
+            <!-- Notification Content Preferences -->
+            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">📋 Benachrichtigungs-Inhalte</h4>
+            <p class="help-text">Wählen Sie, welche Informationen in Ihren Benachrichtigungen angezeigt werden sollen:</p>
+            
+            <form id="notification-preferences-form">
+                <div class="notification-section">
+                    <h5>📄 Aufgaben-Informationen</h5>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-task-name" checked>
+                                Aufgaben-Name
+                            </label>
+                            <div class="help-text">Name der Aufgabe anzeigen</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-time-worked" checked>
+                                Arbeitszeit
+                            </label>
+                            <div class="help-text">Aufgewendete Zeit anzeigen</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-difficulty">
+                                Schwierigkeit
+                            </label>
+                            <div class="help-text">Schwierigkeitsgrad (1-5) anzeigen</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-urgency">
+                                Dringlichkeit
+                            </label>
+                            <div class="help-text">Dringlichkeitsstufe (1-5) anzeigen</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-due-date">
+                                Fälligkeitsdatum
+                            </label>
+                            <div class="help-text">Deadline der Aufgabe anzeigen</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-task-note">
+                                Aufgaben-Notizen
+                            </label>
+                            <div class="help-text">Zusätzliche Notizen zur Aufgabe</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="notification-section">
+                    <h5>👤 Personen-Informationen</h5>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-player-name" checked>
+                                Spieler-Name
+                            </label>
+                            <div class="help-text">Name der handelnden Person anzeigen</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="notification-section">
+                    <h5>🎯 Bewertungs-Informationen</h5>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-rating" checked>
+                                Bewertung
+                            </label>
+                            <div class="help-text">Sterne-Bewertung (1-5) anzeigen</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-commentary">
+                                Kommentare
+                            </label>
+                            <div class="help-text">Bewertungs-Kommentare anzeigen</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="content-exp-gained" checked>
+                                Erhaltene XP
+                            </label>
+                            <div class="help-text">Gewonnene Erfahrungspunkte anzeigen</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="notification-section">
+                    <h5>🔔 Benachrichtigungs-Typen</h5>
+                    <p class="help-text">Wählen Sie, für welche Ereignisse Sie Benachrichtigungen erhalten möchten:</p>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-task-submission" checked>
+                                📤 Aufgaben-Einreichungen
+                            </label>
+                            <div class="help-text">Wenn jemand eine Aufgabe zur Genehmigung einreicht</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-task-approval" checked>
+                                ✅ Aufgaben-Genehmigungen
+                            </label>
+                            <div class="help-text">Wenn Ihre Aufgabe genehmigt wird</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-task-decline" checked>
+                                ❌ Aufgaben-Ablehnungen
+                            </label>
+                            <div class="help-text">Wenn Ihre Aufgabe abgelehnt wird</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-level-up" checked>
+                                🎉 Level-Aufstiege
+                            </label>
+                            <div class="help-text">Wenn jemand ein neues Level erreicht</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-reward-redeemed" checked>
+                                🏆 Belohnungs-Einlösungen
+                            </label>
+                            <div class="help-text">Wenn jemand eine Belohnung einlöst</div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-new-task">
+                                📋 Neue Aufgaben
+                            </label>
+                            <div class="help-text">Wenn neue Aufgaben erstellt werden</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="type-reminders" checked>
+                                ⏰ Erinnerungen
+                            </label>
+                            <div class="help-text">Fälligkeits-Erinnerungen und andere Termine</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Enhanced Reminder Settings -->
+                <div class="notification-section">
+                    <h5>⏰ Erinnerungs-Einstellungen</h5>
+                    <p class="help-text">Konfigurieren Sie detaillierte Erinnerungsoptionen:</p>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="reminders-enabled">
+                            📅 Tägliche Aufgaben-Erinnerungen aktivieren
+                        </label>
+                        <div class="help-text">Erhalten Sie täglich eine Übersicht Ihrer offenen Aufgaben</div>
+                    </div>
+                    
+                    <div id="daily-reminder-settings" style="margin-left: 1.5rem; display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>🕐 Uhrzeit für tägliche Erinnerung</label>
+                                <input type="time" id="daily-reminder-time" value="08:00">
+                                <div class="help-text">Wann möchten Sie täglich erinnert werden?</div>
+                            </div>
+                            <div class="form-group">
+                                <label>📅 Wochentage</label>
+                                <div class="weekday-selector">
+                                    <label><input type="checkbox" id="remind-monday" checked> Mo</label>
+                                    <label><input type="checkbox" id="remind-tuesday" checked> Di</label>
+                                    <label><input type="checkbox" id="remind-wednesday" checked> Mi</label>
+                                    <label><input type="checkbox" id="remind-thursday" checked> Do</label>
+                                    <label><input type="checkbox" id="remind-friday" checked> Fr</label>
+                                    <label><input type="checkbox" id="remind-saturday"> Sa</label>
+                                    <label><input type="checkbox" id="remind-sunday"> So</label>
+                                </div>
+                                <div class="help-text">An welchen Wochentagen sollen Erinnerungen gesendet werden?</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="due-date-warnings" checked>
+                            ⚠️ Fälligkeits-Warnungen aktivieren
+                        </label>
+                        <div class="help-text">Werden Sie vor Fälligkeitsterminen gewarnt</div>
+                    </div>
+                    
+                    <div id="due-date-settings" style="margin-left: 1.5rem;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📊 Warnung vor Fälligkeit (Tage)</label>
+                                <select id="due-date-days">
+                                    <option value="1">1 Tag vorher</option>
+                                    <option value="2">2 Tage vorher</option>
+                                    <option value="3">3 Tage vorher</option>
+                                    <option value="7">1 Woche vorher</option>
+                                </select>
+                                <div class="help-text">Wie viele Tage vor Fälligkeit warnen?</div>
+                            </div>
+                            <div class="form-group">
+                                <label>🔔 Wiederholungs-Frequenz</label>
+                                <select id="reminder-frequency">
+                                    <option value="once">Einmalig</option>
+                                    <option value="daily">Täglich bis erledigt</option>
+                                    <option value="every-other-day">Jeden zweiten Tag</option>
+                                </select>
+                                <div class="help-text">Wie oft soll bei überfälligen Aufgaben erinnert werden?</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Privacy & Display Settings -->
+                <div class="notification-section">
+                    <h5>🔒 Datenschutz & Anzeige</h5>
+                    <p class="help-text">Kontrollieren Sie, was Sie von anderen Spielern sehen können:</p>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="show-other-players-tasks">
+                            📋 Aufgaben-Details anderer Spieler anzeigen
+                        </label>
+                        <div class="help-text">Zeigt Details von Aufgaben anderer Spieler (Schwierigkeit, Notizen, etc.). Wenn deaktiviert, sehen Sie nur Titel und Ersteller.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="show-player-stats">
+                            📊 Detaillierte Spieler-Statistiken anzeigen
+                        </label>
+                        <div class="help-text">Zeigt erweiterte Statistiken anderer Spieler im Scoreboard</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="show-notification-previews" checked>
+                            🔔 Benachrichtigungs-Vorschauen anzeigen
+                        </label>
+                        <div class="help-text">Zeigt Vorschau-Text in Benachrichtigungen (kann sensible Daten enthalten)</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-success">Benachrichtigungs-Einstellungen speichern</button>
             </form>
         </div>
 
@@ -273,18 +618,10 @@
             <form id="preferences-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Theme</label>
-                        <select id="theme">
-                            <option value="default">Default</option>
-                            <option value="dark">Dark Mode</option>
-                            <option value="light">Light Mode</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Notifications</label>
+                        <label>Benachrichtigungen</label>
                         <select id="notifications-enabled">
-                            <option value="true">Enabled</option>
-                            <option value="false">Disabled</option>
+                            <option value="true">Aktiviert</option>
+                            <option value="false">Deaktiviert</option>
                         </select>
                     </div>
                 </div>
@@ -295,5 +632,21 @@
     </div>
 
     <script type="module" src="profile.js"></script>
+    <script>
+        // Add event listeners for toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle reminder settings
+            document.getElementById('reminders-enabled').addEventListener('change', function() {
+                const settings = document.getElementById('daily-reminder-settings');
+                settings.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Toggle due date settings
+            document.getElementById('due-date-warnings').addEventListener('change', function() {
+                const settings = document.getElementById('due-date-settings');
+                settings.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

@@ -15,6 +15,7 @@ import { updateClaimedRewards } from './modules/api.js';
 let currentUser = null;
 let currentPlayerId = null;
 let currentFilter = 'all';
+let showTaskDetails = false; // Will be loaded from user preferences
 let adminConfig = {};
 let rewardsEnabled = true;
 
@@ -33,6 +34,7 @@ async function checkAuth() {
     
     currentUser = await response.json();
     currentPlayerId = currentUser.id; // Use user ID as player ID
+    window.currentUser = currentUser; // Make it globally accessible
     
     // Update navigation with user info
     updateNavigation();
@@ -93,6 +95,9 @@ async function loadAllData() {
     loadRewards(),
     loadAdminConfig()
   ]);
+  
+  // Check for pending approvals
+  updatePendingApprovalNotification();
 }
 
 // Load admin configuration for dynamic features
@@ -112,7 +117,7 @@ async function loadAdminConfig() {
       // Update rewards enabled status
       rewardsEnabled = adminConfig.rewards_enabled === 'true';
       
-      // Update infobox with current EXP configuration
+      // Update infobox with current XP configuration
       updateExpInfobox();
       
       // Load dynamic rewards
@@ -144,11 +149,18 @@ function getLevelTitle(level) {
     const titleIndex = level - 1;
     
     if (titleIndex < levelTitles.length) {
-      // Use configured title
-      return levelTitles[titleIndex] || '';
+      const levelData = levelTitles[titleIndex];
+      // Handle both old format (string) and new format (object)
+      if (typeof levelData === 'string') {
+        return levelData;
+      } else if (levelData && levelData.title) {
+        return levelData.title;
+      }
+      return '';
     } else {
       // For levels beyond configured titles, use the last title with a suffix
-      const lastTitle = levelTitles[levelTitles.length - 1] || 'Master';
+      const lastLevelData = levelTitles[levelTitles.length - 1];
+      const lastTitle = typeof lastLevelData === 'string' ? lastLevelData : (lastLevelData?.title || 'Master');
       const extraLevels = level - levelTitles.length;
       return `${lastTitle} +${extraLevels}`;
     }
@@ -158,51 +170,86 @@ function getLevelTitle(level) {
   }
 }
 
-// Update EXP infobox with current configuration
-function updateExpInfobox() {
-  const expContent = document.getElementById('exp-explanation-content');
-  if (!expContent) return;
+// Get level emoji from admin configuration
+function getLevelEmoji(level) {
+  console.log('getLevelEmoji called with level:', level);
+  console.log('adminConfig.level_titles:', adminConfig.level_titles);
   
+  if (!adminConfig.level_titles) return adminConfig.level_emoji || '🐷';
+  
+  try {
+    const levelTitles = JSON.parse(adminConfig.level_titles);
+    console.log('Parsed level titles:', levelTitles);
+    
+    // Level titles are 0-indexed in array, but levels start at 1
+    const titleIndex = level - 1;
+    
+    if (titleIndex < levelTitles.length) {
+      const levelData = levelTitles[titleIndex];
+      console.log('Level data for index', titleIndex, ':', levelData);
+      
+      // Handle new format (object with emoji)
+      if (levelData && typeof levelData === 'object' && levelData.emoji) {
+        console.log('Using per-level emoji:', levelData.emoji);
+        return levelData.emoji;
+      }
+    }
+    
+    // Fallback to global level emoji or default
+    console.log('Using fallback emoji:', adminConfig.level_emoji || '🐷');
+    return adminConfig.level_emoji || '🐷';
+  } catch (e) {
+    console.error('Error parsing level titles:', e);
+    return adminConfig.level_emoji || '🐷';
+  }
+}
+
+// Update XP infobox with current configuration
+function updateExpInfobox() {
+  // Update dynamic values in the existing static content
   const baseFormula = adminConfig.exp_base_formula || '10';
   const urgencyFormula = adminConfig.exp_urgency_formula || '5';
   const timeBonus = adminConfig.exp_time_bonus || '1';
   const earlyBonus = adminConfig.exp_early_bonus || '20';
   
-  expContent.innerHTML = `
-    <table>
-      <tr><th>Faktor</th><th>Wert</th></tr>
-      <tr><td>Basis</td><td>${baseFormula} × Schwierigkeit × Multiplier</td></tr>
-      <tr><td>Dringlichkeit</td><td>${urgencyFormula} × Dringlichkeit × Multiplier</td></tr>
-      <tr><td>Zeitaufwand</td><td>+ ${timeBonus} EXP pro Minute</td></tr>
-      <tr><td>Bonus</td><td>+ ${earlyBonus} EXP, wenn vor Fälligkeitsdatum erledigt</td></tr>
-      <tr><td>Strafe</td><td>EXP werden reduziert, wenn überfällig</td></tr>
-    </table>
-    <b>Multipliers (Schwierigkeit):</b><br>
-    Level 1: ${adminConfig.exp_multiplier_diff_1 || '0.8'}x, 
-    Level 2: ${adminConfig.exp_multiplier_diff_2 || '1.0'}x, 
-    Level 3: ${adminConfig.exp_multiplier_diff_3 || '1.3'}x, 
-    Level 4: ${adminConfig.exp_multiplier_diff_4 || '1.7'}x, 
-    Level 5: ${adminConfig.exp_multiplier_diff_5 || '2.2'}x<br>
-    <b>Multipliers (Dringlichkeit):</b><br>
-    Level 1: ${adminConfig.exp_multiplier_urg_1 || '1.0'}x, 
-    Level 2: ${adminConfig.exp_multiplier_urg_2 || '1.1'}x, 
-    Level 3: ${adminConfig.exp_multiplier_urg_3 || '1.2'}x, 
-    Level 4: ${adminConfig.exp_multiplier_urg_4 || '1.4'}x, 
-    Level 5: ${adminConfig.exp_multiplier_urg_5 || '1.6'}x<br>
-    <br>
-    <span style="color:#7ed957;">Je dringender, desto kürzer darf das Fälligkeitsdatum in der Zukunft liegen!</span>
-  `;
+  // Update the static formula values
+  const basValueEl = document.querySelector('.formula-value');
+  if (basValueEl) basValueEl.textContent = `${baseFormula} × Schwierigkeit`;
+  
+  const urgValueEls = document.querySelectorAll('.formula-value');
+  if (urgValueEls[1]) urgValueEls[1].textContent = `+ ${urgencyFormula} × Dringlichkeit`;
+  
+  const timeValueEls = document.querySelectorAll('.formula-value');
+  if (timeValueEls[2]) timeValueEls[2].textContent = `+ ${timeBonus} XP pro Minute`;
+  
+  const bonusValueEls = document.querySelectorAll('.formula-value');
+  if (bonusValueEls[3]) bonusValueEls[3].textContent = `+ ${earlyBonus} XP`;
+  
+  // Update multiplier examples
+  const diffExamples = document.querySelectorAll('.difficulty-1, .difficulty-3, .difficulty-5');
+  if (diffExamples[0]) diffExamples[0].textContent = `Diff 1: ${Math.round(baseFormula * 1 * (adminConfig.exp_multiplier_diff_1 || 0.8))}`;
+  if (diffExamples[1]) diffExamples[1].textContent = `Diff 3: ${Math.round(baseFormula * 3 * (adminConfig.exp_multiplier_diff_3 || 1.3))}`;
+  if (diffExamples[2]) diffExamples[2].textContent = `Diff 5: ${Math.round(baseFormula * 5 * (adminConfig.exp_multiplier_diff_5 || 2.2))}`;
+  
+  const urgExamples = document.querySelectorAll('.urgency-1, .urgency-3, .urgency-5');
+  if (urgExamples[0]) urgExamples[0].textContent = `Urg 1: +${Math.round(urgencyFormula * 1 * (adminConfig.exp_multiplier_urg_1 || 1.0))}`;
+  if (urgExamples[1]) urgExamples[1].textContent = `Urg 3: +${Math.round(urgencyFormula * 3 * (adminConfig.exp_multiplier_urg_3 || 1.2))}`;
+  if (urgExamples[2]) urgExamples[2].textContent = `Urg 5: +${Math.round(urgencyFormula * 5 * (adminConfig.exp_multiplier_urg_5 || 1.6))}`;
 }
 
 function updatePlayerInfo() {
   const stats = getPlayerStatsById(currentPlayerId);
   const player = getPlayerById(currentPlayerId) || { name: currentUser?.username || 'Unknown' };
   const level = getLevel(stats.exp||0);
-  // Correct next/prev level EXP for new formula
+  // Correct next/prev level XP for new formula
   const nextLevelExp = 100 * (Math.pow(2, level) - 1);
   const prevLevelExp = level > 1 ? 100 * (Math.pow(2, level-1) - 1) : 0;
   const rank = getRank(level);
   const levelTitle = getLevelTitle(level);
+  
+  // Get level emoji from configuration (per-level or fallback to global)
+  const levelEmoji = getLevelEmoji(level);
+  
   const info = document.getElementById('current-player-info');
   if (info) {
     const expThisLevel = (stats.exp||0) - prevLevelExp;
@@ -215,12 +262,12 @@ function updatePlayerInfo() {
     info.innerHTML = `
       <span style="font-weight:bold;">Current Player: ${player.name}</span>
       | <span style="font-weight:bold;">Level: ${level}</span>
-      ${displayTitle ? `<span style="color:#b97a56;font-size:1.1em;">&#x1F416; ${displayTitle}</span>` : ''}
+      ${displayTitle ? `<span style="color:#b97a56;font-size:1.1em;">${levelEmoji} ${displayTitle}</span>` : ''}
       | <span style="font-weight:bold;">EXP: ${stats.exp||0}</span>
       <div class="exp-bar-outer" style="height:14px;margin:6px 0 2px 0;width:100%;">
         <div class="exp-bar-inner" style="width:${expPercent}%;height:100%;"></div>
       </div>
-      <span style="font-size:0.95em;">${expThisLevel} / ${expNeeded} EXP to Level ${level+1}</span>
+      <span style="font-size:0.95em;">${expThisLevel} / ${expNeeded} XP to Level ${level+1}</span>
     `;
   }
   renderScoreboard(currentPlayerId);
@@ -229,7 +276,7 @@ function updatePlayerInfo() {
 function onFilterChange(newFilter) {
   currentFilter = newFilter;
   renderFilterBar(currentFilter, onFilterChange);
-  renderTasksUI(currentPlayerId, currentFilter);
+  renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
 }
 
 function renderRewardsUI() {
@@ -295,7 +342,7 @@ function setupTaskFilterBar() {
       btn.onclick = () => {
         currentFilter = id;
         renderFilterBar(currentFilter, onFilterChange);
-        renderTasksUI(currentPlayerId, currentFilter);
+        renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
       };
     }
   });
@@ -311,10 +358,30 @@ function setupInfocenterToggle() {
   }
 }
 
+// Global function for section toggles in infocenter
+window.toggleSection = function(sectionId) {
+  const content = document.getElementById(sectionId);
+  const section = content.closest('.collapsible-section');
+  const indicator = section.querySelector('.collapse-indicator');
+  
+  if (content.classList.contains('collapsed')) {
+    content.classList.remove('collapsed');
+    indicator.style.transform = 'rotate(0deg)';
+  } else {
+    content.classList.add('collapsed');
+    indicator.style.transform = 'rotate(-90deg)';
+  }
+};
+
 async function main() {
   // Check authentication first
   const isAuthenticated = await checkAuth();
   if (!isAuthenticated) return;
+  
+  // Load showTaskDetails from user preferences
+  const notificationPrefs = currentUser.notification_preferences || {};
+  const privacy = notificationPrefs.privacy || {};
+  showTaskDetails = privacy.showOtherPlayersTasks === true;
   
   // Show loading state
   const playerInfo = document.getElementById('current-player-info');
@@ -330,7 +397,7 @@ async function main() {
   
   // Update UI with basic data immediately
   updatePlayerInfo();
-  renderTasksUI(currentPlayerId, currentFilter);
+  renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
   
   // Setup basic functionality
   setupInfocenterToggle();
@@ -353,9 +420,10 @@ async function main() {
   // Setup sockets
   setupSocket(async () => {
     await loadAllData();
-    renderTasksUI(currentPlayerId, currentFilter);
+    renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
     updatePlayerInfo();
     renderRewardsUI();
+    updatePendingApprovalNotification();
   });
   setupNotificationSocket(n => {
     showNotificationBanner(n, rewards, currentPlayerId);
@@ -363,13 +431,16 @@ async function main() {
   // Setup add-task form
   setupAddTaskForm(async () => {
     await loadAllData();
-    renderTasksUI(currentPlayerId, currentFilter);
+    renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
     renderRewardsUI();
+    updatePendingApprovalNotification();
   }, () => currentPlayerId);
   
   // Initialize personal notes (low priority)
   setTimeout(() => {
     initPersonalNotes();
+    // Force check notifications after everything is loaded
+    updatePendingApprovalNotification();
   }, 100);
 }
 
@@ -423,5 +494,41 @@ async function logout() {
 
 // Make logout function globally available
 window.logout = logout;
+
+// Function to check for pending approvals and update notification
+function updatePendingApprovalNotification() {
+  if (!tasks || !window.currentUser) {
+    console.warn('Cannot check notifications: missing tasks or user data');
+    return;
+  }
+  
+  const currentUserId = window.currentUser.id;
+  const notification = document.getElementById('pending-approval-notification');
+  const countSpan = document.getElementById('pending-count');
+  
+  if (!notification || !countSpan) {
+    console.warn('Notification elements not found in DOM');
+    return;
+  }
+  
+  // Count tasks that are submitted and waiting for this user's approval
+  const pendingTasks = tasks.filter(task => 
+    task.status === 'submitted' && 
+    String(task.player) !== String(currentUserId) && // Can't approve own tasks
+    String(task.playerId) !== String(currentUserId) && // Can't approve own tasks
+    (String(task.approver) === String(currentUserId) || task.approver === '__anyone__')
+  );
+  
+  const pendingCount = pendingTasks.length;
+  console.log(`Pending approval check: ${pendingCount} tasks found for user ${currentUserId}`);
+  
+  if (pendingCount > 0) {
+    countSpan.textContent = pendingCount;
+    notification.style.display = 'block';
+    console.log('Approval notification shown');
+  } else {
+    notification.style.display = 'none';
+  }
+}
 
 document.addEventListener('DOMContentLoaded', main);

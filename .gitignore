@@ -34,6 +34,17 @@ backend/auth.db.clean.js
 *.tmp
 *.bak
 
+# Documentation and summary files (temporary)
+*_SUMMARY.md
+*_GUIDE.md
+*_TEST_*.md
+*_IMPROVEMENTS.md
+*_FIXES_*.md
+cleanup-repo.ps1
+test-*.js
+*_broken.html
+*_fixed.html
+
 # Logs
 *.log
 npm-debug.log*

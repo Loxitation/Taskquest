@@ -27,476 +27,434 @@
         }
 
         .admin-section {
-            background: #232526;
-            border-radius: 12px;
-            padding: 1.5rem;
+            background: linear-gradient(135deg, #232526 0%, #18191c 100%);
+            border-radius: 16px;
+            padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             border: 1px solid #3a3a3a;
         }
 
         .admin-section h3 {
             color: #ffb347;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid #ffb347;
-            padding-bottom: 0.5rem;
-            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tab-navigation {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: rgba(35, 37, 38, 0.8);
+            padding: 0.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: #b0b0b0;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-button:hover {
+            background: rgba(255,179,71,0.1);
+            color: #ffb347;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
+            color: #232526;
+            font-weight: bold;
         }
 
         .config-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
         }
 
         .config-item {
-            border: 1px solid #555;
-            border-radius: 8px;
-            padding: 1rem;
-            background: #18191c;
-            transition: border-color 0.2s;
+            background: rgba(35, 37, 38, 0.8);
+            border: 1px solid #4a4a4a;
+            border-radius: 10px;
+            padding: 1.2rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
 
         .config-item:hover {
             border-color: #ffb347;
+            transform: translateY(-2px);
         }
 
         .config-item label {
             display: block;
+            color: #ffb347;
+            margin-bottom: 0.5rem;
             font-weight: 600;
-            color: #f3f3f3;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
-        .config-item input, .config-item select, .config-item textarea {
+        .config-item input,
+        .config-item select,
+        .config-item textarea {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.8rem;
             border: 1px solid #555;
-            border-radius: 5px;
-            margin-bottom: 0.5rem;
-            background: #232526;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
             color: #f3f3f3;
-            box-sizing: border-box;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
         }
 
-        .config-item input:focus, .config-item select:focus, .config-item textarea:focus {
+        .config-item input:focus,
+        .config-item select:focus,
+        .config-item textarea:focus {
             outline: none;
             border-color: #ffb347;
-            box-shadow: 0 0 5px rgba(255,179,71,0.3);
+            box-shadow: 0 0 0 2px rgba(255,179,71,0.2);
         }
 
-        .config-item .description {
+        .config-item small {
+            display: block;
+            color: #999;
+            margin-top: 0.5rem;
             font-size: 0.8rem;
-            color: #aaa;
-            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content .admin-section {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .btn {
-            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
+            color: #232526;
             border: none;
-            border-radius: 5px;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(255,179,71,0.3);
         }
 
-        .btn-primary {
-            background: #ffb347;
-            color: #232526;
-        }
-
-        .btn-primary:hover {
-            background: #ff8c42;
-        }
-
-        .btn-success {
-            background: #7ed957;
-            color: #232526;
-        }
-
-        .btn-success:hover {
-            background: #6bc946;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,179,71,0.4);
         }
 
         .btn-danger {
-            background: #ef4444;
+            background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
             color: white;
         }
 
-        .btn-danger:hover {
-            background: #dc2626;
+        .btn-success {
+            background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
+            color: white;
         }
 
-        .users-table {
+        .btn-primary {
+            background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
+            color: white;
+        }
+
+        .users-table,
+        .level-titles-table,
+        .rewards-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
-            background: #18191c;
+            background: rgba(35, 37, 38, 0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 1rem 0;
         }
 
         .users-table th,
-        .users-table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #444;
-            color: #f3f3f3;
-        }
-
-        .users-table th {
-            background: #2a2a2a;
-            font-weight: 600;
-            color: #ffb347;
-            border-bottom: 2px solid #ffb347;
-        }
-
-        .config-categories {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .config-category {
-            background: #18191c;
-            border-radius: 8px;
-            padding: 1.5rem;
-            border: 1px solid #444;
-        }
-
-        .config-category h4 {
-            color: #7ed957;
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-            border-bottom: 1px solid #555;
-            padding-bottom: 0.5rem;
-        }
-
-        .user-actions .btn {
-            margin-right: 0.5rem;
-        }
-
-        .level-titles-table,
-        .reward-item {
-            background: #18191c;
-            border: 1px solid #444;
-        }
-
-        .level-titles-table th {
-            background: #2a2a2a;
-            color: #ffb347;
-            border-bottom: 2px solid #ffb347;
-        }
-
-        .level-titles-table td {
-            color: #f3f3f3;
-            border-bottom: 1px solid #444;
-        }
-
-        .reward-item {
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .reward-item input, .reward-item select {
-            background: #232526;
-            color: #f3f3f3;
-            border: 1px solid #555;
-        }
-
-        .user-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .level-titles-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
         .level-titles-table th,
-        .level-titles-table td {
-            padding: 0.75rem;
+        .rewards-table th {
+            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
+            color: #232526;
+            padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .level-titles-table th {
-            background: #f9fafb;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .level-titles-table input {
-            width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 3px;
-            padding: 0.5rem;
-            background: white;
-            color: #1f2937;
-        }
-
-        .rewards-config {
-            margin-top: 1rem;
-        }
-
-        #rewards-list {
-            max-height: 600px;
-            overflow-y: auto;
-            border: 1px solid #3a3a3a;
-            border-radius: 8px;
-            padding: 1rem;
-            background: rgba(255,179,71,0.02);
-        }
-
-        .reward-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            background: #f9fafb;
-        }
-
-        .reward-item input, .reward-item select {
-            margin-bottom: 0.5rem;
-            background: white;
-            color: #1f2937;
-            box-sizing: border-box !important;
-        }
-
-        .reward-item input[style*="width: 100%"] {
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 2rem;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
             font-weight: bold;
-            cursor: pointer;
         }
 
-        .close:hover {
-            color: black;
+        .users-table td,
+        .level-titles-table td,
+        .rewards-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #444;
+            color: #f3f3f3;
         }
 
-        .config-categories {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            align-items: start;
+        .users-table tr:hover,
+        .level-titles-table tr:hover,
+        .rewards-table tr:hover {
+            background: rgba(255,179,71,0.1);
         }
 
-        .config-category {
-            background: rgba(255,179,71,0.03);
-            border: 1px solid #3a3a3a;
-            border-radius: 8px;
-            padding: 1.5rem;
-            min-height: 200px;
-        }
-
-        .config-category h4 {
-            color: #ffb347;
-            margin-bottom: 1rem;
-            margin-top: 0;
-        }
-
-        .config-grid {
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .nav-bar {
-            background: #1f2937;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            color: white;
+            justify-content: center;
+            z-index: 1000;
         }
 
-        .nav-bar a {
-            color: white;
-            text-decoration: none;
-            margin-left: 1rem;
+        .login-form {
+            background: linear-gradient(135deg, #232526 0%, #18191c 100%);
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid #3a3a3a;
+            max-width: 400px;
+            width: 100%;
         }
 
-        .nav-bar a:hover {
-            text-decoration: underline;
+        .login-form h2 {
+            color: #ffb347;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #ffb347;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: #f3f3f3;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 0 2px rgba(255,179,71,0.2);
         }
 
         .alert {
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 500;
         }
 
         .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background: rgba(46, 213, 115, 0.2);
+            border: 1px solid #2ed573;
+            color: #2ed573;
         }
 
         .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid #ff4757;
+            color: #ff4757;
+        }
+
+        .alert-info {
+            background: rgba(116, 185, 255, 0.2);
+            border: 1px solid #74b9ff;
+            color: #74b9ff;
+        }
+
+        @media (max-width: 768px) {
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tab-navigation {
+                flex-direction: column;
+            }
+            
+            .admin-container {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="nav-bar">
-        <div>
-            <strong>TaskQuest Admin-Panel</strong>
-        </div>
-        <div>
-            <span id="admin-username"></span>
-            <a href="/">Dashboard</a>
-            <a href="#" onclick="logout()">Abmelden</a>
-        </div>
-    </div>
-
-    <div class="admin-container">
-        <div class="admin-header">
-            <h1>🧙‍♂️ Admin-Panel</h1>
-            <p>Benutzer verwalten, Systemeinstellungen konfigurieren und das TaskQuest-Reich überwachen</p>
-        </div>
-
-        <div id="alert-container"></div>
-
-        <!-- User Management Section -->
-        <div class="admin-section">
-            <h3>👥 Benutzerverwaltung</h3>
-            <button class="btn btn-primary" onclick="showCreateUserModal()">Neuen Benutzer erstellen</button>
-            
-            <table class="users-table" id="users-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Benutzername</th>
-                        <th>Rolle</th>
-                        <th>E-Mail</th>
-                        <th>Erstellt</th>
-                        <th>Letzter Login</th>
-                        <th>Status</th>
-                        <th>Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody id="users-tbody">
-                </tbody>
-            </table>
-        </div>
-
-        <!-- System Configuration Section -->
-        <div class="admin-section">
-            <h3>⚙️ Systemkonfiguration</h3>
-            <div class="config-categories">
-                <div class="config-category">
-                    <h4>🎯 EXP-Einstellungen</h4>
-                    <div class="config-grid" id="exp-config">
-                    </div>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-form">
+            <h2>🔐 Admin Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Benutzername:</label>
+                    <input type="text" id="username" required>
                 </div>
-                <div class="config-category">
-                    <h4>🏆 Belohnungen</h4>
-                    <div class="config-grid" id="rewards-config-section">
-                    </div>
+                <div class="form-group">
+                    <label for="password">Passwort:</label>
+                    <input type="password" id="password" required>
                 </div>
-                <div class="config-category">
-                    <h4>🔧 Allgemeine Einstellungen</h4>
-                    <div class="config-grid" id="general-config">
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Alle Änderungen speichern</button>
-        </div>
-
-        <!-- Level Titles Management -->
-        <div class="admin-section">
-            <h3>🏆 Level-Titel</h3>
-            <table class="level-titles-table" id="level-titles-table">
-                <thead>
-                    <tr>
-                        <th>Level</th>
-                        <th>Titel</th>
-                        <th>Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody id="level-titles-tbody">
-                </tbody>
-            </table>
-            <button class="btn btn-primary" onclick="addLevelTitle()">Level-Titel hinzufügen</button>
-            <button class="btn btn-success" onclick="saveLevelTitles()">Alle Titel speichern</button>
-        </div>
-
-    </div>
-
-    <!-- Create User Modal -->
-    <div id="create-user-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeCreateUserModal()">&times;</span>
-            <h3>Create New User</h3>
-            <form id="create-user-form">
-                <div style="margin-bottom: 1rem;">
-                    <label>Username:</label>
-                    <input type="text" id="new-username" required>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label>Password:</label>
-                    <input type="password" id="new-password" required>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label>Role:</label>
-                    <select id="new-role">
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label>Email (optional):</label>
-                    <input type="email" id="new-email">
-                </div>
-                <button type="submit" class="btn btn-primary">Create User</button>
+                <button type="submit" class="btn" style="width: 100%;">Anmelden</button>
             </form>
+            <div id="login-error" style="display: none;" class="alert alert-error"></div>
+        </div>
+    </div>
+
+    <!-- Main Admin Content -->
+    <div class="admin-container" id="admin-content" style="display: none;">
+        <!-- Add user navigation similar to dashboard -->
+        <div id="user-nav" style="position: fixed; top: 1rem; right: 1rem; background: rgba(24, 25, 28, 0.95); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px); z-index: 1000; text-align: right;">
+            <!-- User info will be populated by JavaScript -->
+        </div>
+        
+        <div class="admin-header">
+            <div style="text-align: center;">
+                <h1>🧙‍♂️ TaskQuest Admin Panel</h1>
+                <p>Systemverwaltung und Konfiguration</p>
+            </div>
         </div>
 
-        <!-- Critical Actions Section -->
-        <div class="admin-section" style="border: 2px solid #dc3545; background: rgba(220, 53, 69, 0.1);">
-            <h3 style="color: #dc3545;">⚠️ Kritische Aktionen</h3>
-            <div style="background: rgba(220, 53, 69, 0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                <p style="color: #dc3545; font-weight: bold; margin-bottom: 0.5rem;">⚠️ WARNUNG: Diese Aktion ist unwiderruflich!</p>
-                <p style="color: #f3f3f3; margin-bottom: 1rem;">Das Zurücksetzen der Anwendung löscht ALLE Daten permanent:</p>
-                <ul style="color: #f3f3f3; margin-left: 1.5rem; margin-bottom: 1rem;">
-                    <li>Alle Aufgaben und deren Verlauf</li>
-                    <li>Benutzer-EXP und Statistiken</li>
-                    <li>Systemkonfigurationen</li>
-                    <li>Archivierte Daten</li>
-                </ul>
-                <button id="reset-app" class="btn btn-danger" style="font-weight: bold;">
-                    🗑️ Anwendung komplett zurücksetzen
-                </button>
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button active" onclick="showTab('users')">
+                👥 Benutzer
+            </button>
+            <button class="tab-button" onclick="showTab('general')">
+                ⚙️ Allgemein
+            </button>
+            <button class="tab-button" onclick="showTab('xp')">
+                💎 XP-System
+            </button>
+            <button class="tab-button" onclick="showTab('rewards')">
+                🏆 Belohnungen
+            </button>
+            <button class="tab-button" onclick="showTab('levels')">
+                📊 Level
+            </button>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content active">
+            <div class="admin-section">
+                <h3>👥 Benutzerverwaltung</h3>
+                <table class="users-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Benutzername</th>
+                            <th>Rolle</th>
+                            <th>Erstellt</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <!-- Users will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- General Tab -->
+        <div id="general-tab" class="tab-content">
+            <div class="admin-section">
+                <h3>⚙️ Allgemeine Einstellungen</h3>
+                <div class="config-grid" id="general-config">
+                </div>
+                <button class="btn btn-danger" style="margin-top: 1rem;" onclick="resetApplication()">🔄 System zurücksetzen</button>
+                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
+            </div>
+        </div>
+
+        <!-- XP System Tab -->
+        <div id="xp-tab" class="tab-content">
+            <div class="admin-section">
+                <h3>💎 XP-System Einstellungen</h3>
+                <div class="config-grid" id="exp-config">
+                </div>
+                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
+            </div>
+        </div>
+
+        <!-- Rewards Tab -->
+        <div id="rewards-tab" class="tab-content">
+            <div class="admin-section">
+                <h3>🏆 Belohnungen</h3>
+                <div class="config-grid" id="rewards-config-section">
+                </div>
+                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
+            </div>
+        </div>
+
+        <!-- Level Configuration Tab -->
+        <div id="levels-tab" class="tab-content">
+            <div class="admin-section">
+                <h3>📊 Level-Konfiguration</h3>
+                
+                <!-- Level System Settings -->
+                <div style="margin-bottom: 2rem;">
+                    <h4>⚙️ Level-System Einstellungen</h4>
+                    <div class="config-grid" id="level-config">
+                    </div>
+                </div>
+                
+                <!-- Level Titles Management -->
+                <div>
+                    <h4>🏆 Level-Titel verwalten</h4>
+                    <table class="level-titles-table" id="level-titles-table">
+                        <thead>
+                            <tr>
+                                <th>Level</th>
+                                <th>Titel</th>
+                                <th>Emoji</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="level-titles-tbody">
+                        </tbody>
+                    </table>
+                    <button class="btn btn-primary" onclick="addLevelTitle()">Level-Titel hinzufügen</button>
+                    <button class="btn btn-success" onclick="saveLevelTitles()">Alle Titel speichern</button>
+                </div>
+                
+                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Alle Änderungen speichern</button>
             </div>
         </div>
     </div>

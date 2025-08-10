@@ -83,35 +83,35 @@ const initializeDefaults = async () => {
 
   // Initialize default system configuration
   const defaultConfigs = [
-    // EXP Base System
-    { key: 'exp_base_formula', value: '10', description: 'Base EXP calculation formula: multiplied by difficulty' },
-    { key: 'exp_urgency_formula', value: '5', description: 'Urgency EXP calculation formula: multiplied by urgency' },
-    { key: 'exp_time_bonus', value: '1', description: 'EXP bonus per minute worked' },
-    { key: 'exp_early_bonus', value: '20', description: 'Bonus EXP for completing task before due date' },
-    { key: 'exp_penalty_start_days', value: '1', description: 'Days after due date when penalty starts' },
-    { key: 'exp_penalty_max_days', value: '21', description: 'Days after which penalty is maximum (-10 EXP)' },
+    // XP Base System
+    { key: 'exp_base_formula', value: '10', description: 'Basis-XP Berechnungsformel: multipliziert mit Schwierigkeit' },
+    { key: 'exp_urgency_formula', value: '5', description: 'Dringlichkeits-XP Berechnungsformel: multipliziert mit Dringlichkeit' },
+    { key: 'exp_time_bonus', value: '1', description: 'XP-Bonus pro gearbeitete Minute' },
+    { key: 'exp_early_bonus', value: '20', description: 'Bonus-XP für rechtzeitige Aufgabenerledigung' },
+    { key: 'exp_penalty_start_days', value: '1', description: 'Tage nach Fälligkeitsdatum, ab denen Strafe beginnt' },
+    { key: 'exp_penalty_max_days', value: '21', description: 'Tage, nach denen maximale Strafe erreicht wird (-10 XP)' },
     
-    // EXP Multipliers by Difficulty
-    { key: 'exp_multiplier_diff_1', value: '0.8', description: 'EXP multiplier for difficulty level 1 (very easy)' },
-    { key: 'exp_multiplier_diff_2', value: '1.0', description: 'EXP multiplier for difficulty level 2 (easy)' },
-    { key: 'exp_multiplier_diff_3', value: '1.3', description: 'EXP multiplier for difficulty level 3 (medium)' },
-    { key: 'exp_multiplier_diff_4', value: '1.7', description: 'EXP multiplier for difficulty level 4 (hard)' },
-    { key: 'exp_multiplier_diff_5', value: '2.2', description: 'EXP multiplier for difficulty level 5 (very hard)' },
+    // XP Multiplikatoren nach Schwierigkeit
+    { key: 'exp_multiplier_diff_1', value: '0.8', description: 'XP-Multiplikator für Schwierigkeitsstufe 1 (sehr einfach)' },
+    { key: 'exp_multiplier_diff_2', value: '1.0', description: 'XP-Multiplikator für Schwierigkeitsstufe 2 (einfach)' },
+    { key: 'exp_multiplier_diff_3', value: '1.3', description: 'XP-Multiplikator für Schwierigkeitsstufe 3 (mittel)' },
+    { key: 'exp_multiplier_diff_4', value: '1.7', description: 'XP-Multiplikator für Schwierigkeitsstufe 4 (schwer)' },
+    { key: 'exp_multiplier_diff_5', value: '2.2', description: 'XP-Multiplikator für Schwierigkeitsstufe 5 (sehr schwer)' },
     
-    // EXP Multipliers by Urgency
-    { key: 'exp_multiplier_urg_1', value: '1.0', description: 'EXP multiplier for urgency level 1 (low)' },
-    { key: 'exp_multiplier_urg_2', value: '1.1', description: 'EXP multiplier for urgency level 2 (medium-low)' },
-    { key: 'exp_multiplier_urg_3', value: '1.2', description: 'EXP multiplier for urgency level 3 (medium)' },
-    { key: 'exp_multiplier_urg_4', value: '1.4', description: 'EXP multiplier for urgency level 4 (high)' },
-    { key: 'exp_multiplier_urg_5', value: '1.6', description: 'EXP multiplier for urgency level 5 (critical)' },
+    // XP Multiplikatoren nach Dringlichkeit
+    { key: 'exp_multiplier_urg_1', value: '1.0', description: 'XP-Multiplikator für Dringlichkeitsstufe 1 (niedrig)' },
+    { key: 'exp_multiplier_urg_2', value: '1.1', description: 'XP-Multiplikator für Dringlichkeitsstufe 2 (mittel-niedrig)' },
+    { key: 'exp_multiplier_urg_3', value: '1.2', description: 'XP-Multiplikator für Dringlichkeitsstufe 3 (mittel)' },
+    { key: 'exp_multiplier_urg_4', value: '1.4', description: 'XP-Multiplikator für Dringlichkeitsstufe 4 (hoch)' },
+    { key: 'exp_multiplier_urg_5', value: '1.6', description: 'XP-Multiplikator für Dringlichkeitsstufe 5 (kritisch)' },
     
     // Level System
-    { key: 'level_exp_formula', value: 'exponential', description: 'Level progression formula: linear, exponential, or custom' },
-    { key: 'level_exp_base', value: '100', description: 'Base EXP required for first level' },
-    { key: 'level_exp_multiplier', value: '2', description: 'Multiplier for exponential progression' },
+    { key: 'level_exp_base', value: '100', description: 'Basis-XP erforderlich für erstes Level' },
+    { key: 'level_exp_multiplier', value: '2', description: 'Multiplikator für exponentielle Progression' },
     { key: 'level_titles', value: JSON.stringify([
       'Novice', 'Apprentice', 'Journeyman', 'Expert', 'Master', 'Grandmaster', 'Legend'
     ]), description: 'Level titles for player progression' },
+    { key: 'level_emoji', value: '🐷', description: 'Emoji das neben dem Level-Titel angezeigt wird' },
     
     // Rewards System
     { key: 'rewards_enabled', value: 'true', description: 'Enable or disable reward system' },
@@ -160,12 +160,20 @@ const getUserById = (id, callback) => {
 
 // Update user profile
 const updateUserProfile = (userId, profileData, callback) => {
-  const { gotify_url, gotify_token, profile_settings } = profileData;
-  authDb.run(
-    'UPDATE users SET gotify_url = ?, gotify_token = ?, profile_settings = ? WHERE id = ?',
-    [gotify_url, gotify_token, JSON.stringify(profile_settings), userId],
-    callback
-  );
+  const { gotify_url, gotify_token, profile_settings, notification_preferences } = profileData;
+  
+  let sql = 'UPDATE users SET gotify_url = ?, gotify_token = ?, profile_settings = ?';
+  let params = [gotify_url, gotify_token, JSON.stringify(profile_settings)];
+  
+  if (notification_preferences !== undefined) {
+    sql += ', notification_preferences = ?';
+    params.push(JSON.stringify(notification_preferences));
+  }
+  
+  sql += ' WHERE id = ?';
+  params.push(userId);
+  
+  authDb.run(sql, params, callback);
 };
 
 // Update user password
