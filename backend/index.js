@@ -771,12 +771,12 @@ app.get('/api/player-stats', requireAuth, (req, res) => {
       return res.status(500).json({ error: 'Failed to get users' });
     }
     
-    // For each user, calculate total minutes worked from approved tasks only
+    // For each user, calculate total minutes worked from all approved tasks
     const userPromises = users.map(user => {
       return new Promise((resolve) => {
         tasksDb.get(
-          'SELECT COALESCE(SUM(minutesWorked), 0) as totalMinutes FROM tasks WHERE player = ? AND status = ? AND archived = 1',
-          [user.id, 'done'],
+          'SELECT COALESCE(SUM(minutesWorked), 0) as totalMinutes FROM tasks WHERE player = ? AND archived = 1',
+          [user.id],
           (err, result) => {
             if (err) {
               console.error('Get time worked error for user', user.id, ':', err);
