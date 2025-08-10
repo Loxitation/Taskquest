@@ -29,10 +29,10 @@ export async function getPlayers() {
   return fetchJSON('/api/players');
 }
 export async function getRanks() {
-  return fetchJSON('/ranks.json');
+  return fetchJSON('/api/ranks');
 }
 export async function getRewards() {
-  return fetchJSON('/rewards.json');
+  return fetchJSON('/api/rewards');
 }
 export async function addTask(task) {
   return fetchJSON('/api/tasks', {
@@ -75,4 +75,14 @@ export async function updateClaimedRewards(playerId, name, exp, claimedRewards) 
     body: JSON.stringify({ id: playerId, name, exp, claimedRewards })
   });
 }
+
+// Admin functions
+export async function updateUser(userId, data) {
+  return fetchJSON(`/api/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+}
+
 // Add more API helpers as needed

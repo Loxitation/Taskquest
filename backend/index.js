@@ -238,6 +238,38 @@ app.put('/api/auth/password', requireAuth, async (req, res) => {
   });
 });
 
+// --- PUBLIC API ROUTES ---
+
+// Get ranks (public)
+app.get('/api/ranks', (req, res) => {
+  // Default ranks structure
+  const defaultRanks = [
+    { level: 1, title: "Neuling", minExp: 0, color: "#8B4513" },
+    { level: 2, title: "Lehrling", minExp: 50, color: "#A9A9A9" },
+    { level: 3, title: "Handwerker", minExp: 150, color: "#CD7F32" },
+    { level: 4, title: "Fachmann", minExp: 300, color: "#C0C0C0" },
+    { level: 5, title: "Experte", minExp: 500, color: "#FFD700" },
+    { level: 6, title: "Meister", minExp: 750, color: "#E6E6FA" },
+    { level: 7, title: "Großmeister", minExp: 1100, color: "#F0E68C" },
+    { level: 8, title: "Virtuose", minExp: 1500, color: "#DDA0DD" },
+    { level: 9, title: "Legende", minExp: 2000, color: "#20B2AA" },
+    { level: 10, title: "Mythisch", minExp: 2600, color: "#FF6347" }
+  ];
+  
+  res.json(defaultRanks);
+});
+
+// Get rewards (public)
+app.get('/api/rewards', (req, res) => {
+  rewardsDb.all('SELECT * FROM rewards ORDER BY type, bonus_exp', [], (err, rewards) => {
+    if (err) {
+      console.error('Get rewards error:', err);
+      return res.status(500).json({ error: 'Failed to fetch rewards' });
+    }
+    res.json(rewards);
+  });
+});
+
 // --- ADMIN ROUTES ---
 
 // Get all users (admin only)
@@ -281,6 +313,47 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     if (changes === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Update user (admin only) - for role changes
+app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.id);
+  const { role, email, is_active } = req.body;
+  
+  // Build update query dynamically based on provided fields
+  const updates = [];
+  const values = [];
+  
+  if (role !== undefined) {
+    updates.push('role = ?');
+    values.push(role);
+  }
+  if (email !== undefined) {
+    updates.push('email = ?');
+    values.push(email);
+  }
+  if (is_active !== undefined) {
+    updates.push('is_active = ?');
+    values.push(is_active ? 1 : 0);
+  }
+  
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+  
+  values.push(userId);
+  const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+  
+  authDb.run(sql, values, function(err) {
+    if (err) {
+      console.error('Update user error:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     res.json({ success: true });

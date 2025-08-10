@@ -53,15 +53,15 @@ const createAdminConfigTable = () => {
 
 // Initialize default admin user and system config
 const initializeDefaults = async () => {
-  // Check if admin user exists
-  authDb.get('SELECT id FROM users WHERE username = ?', ['admin'], async (err, row) => {
+  // Check if any admin user exists (particularly ID 1)
+  authDb.get('SELECT id FROM users WHERE id = 1 OR role = ?', ['admin'], async (err, row) => {
     if (err) {
       console.error('Error checking for admin user:', err);
       return;
     }
     
     if (!row) {
-      // Create default admin user
+      // Create default admin user only if no admin exists
       const hashedPassword = await bcrypt.hash('admin', 10);
       authDb.run(
         'INSERT INTO users (id, username, password, role, profile_settings) VALUES (?, ?, ?, ?, ?)',

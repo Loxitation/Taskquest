@@ -100,6 +100,11 @@ function renderUsersTable() {
             </td>
             <td class="user-actions">
                 ${user.id !== currentUser.id ? `
+                    <button class="btn ${user.role === 'admin' ? 'btn-warning' : 'btn-success'}" 
+                            style="font-size: 0.8rem; padding: 0.25rem 0.5rem; margin-right: 0.5rem;" 
+                            onclick="toggleUserRole(${user.id}, '${user.role}')">
+                        ${user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                    </button>
                     <button class="btn btn-danger" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="deleteUser(${user.id})">
                         Delete
                     </button>
@@ -132,6 +137,68 @@ async function deleteUser(userId) {
     } catch (error) {
         console.error('Error deleting user:', error);
         showAlert('Error deleting user', 'error');
+    }
+}
+
+// Toggle user role between admin and user
+async function toggleUserRole(userId, currentRole) {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const action = newRole === 'admin' ? 'grant admin access to' : 'revoke admin access from';
+    
+    if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ role: newRole })
+        });
+
+        if (response.ok) {
+            showAlert(`User role updated to ${newRole} successfully`);
+            await loadUsers();
+        } else {
+            const error = await response.json();
+            showAlert(error.error || 'Failed to update user role', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating user role:', error);
+        showAlert('Error updating user role', 'error');
+    }
+}
+
+// Toggle user role between admin and user
+async function toggleUserRole(userId, currentRole) {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const action = newRole === 'admin' ? 'grant admin privileges to' : 'revoke admin privileges from';
+    
+    if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ role: newRole })
+        });
+
+        if (response.ok) {
+            showAlert(`User role updated to ${newRole}`, 'success');
+            await loadUsers(); // Reload the users table
+        } else {
+            const error = await response.json();
+            showAlert(error.error || 'Failed to update user role', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating user role:', error);
+        showAlert('Error updating user role', 'error');
     }
 }
 
