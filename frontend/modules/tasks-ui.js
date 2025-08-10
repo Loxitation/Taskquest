@@ -146,22 +146,22 @@ export function renderTasksUI(playerId, filter) {
   list.innerHTML = sortHtml;
   // Sort players so current user is first
   const sortedPlayers = [
-    ...players.filter(p => p.id === playerId),
-    ...players.filter(p => p.id !== playerId)
+    ...players.filter(p => String(p.id) === String(playerId)),
+    ...players.filter(p => String(p.id) !== String(playerId))
   ];
   let html = '';
   sortedPlayers.forEach(player => {
     const pid = player.id;
     const pname = player.name || '';
-    html += `<div class="task-user-section"><div class="task-user-header">${pid === playerId ? 'Deine Aufgaben' : `Aufgaben von ${pname}`}</div>`;
+    html += `<div class="task-user-section"><div class="task-user-header">${String(pid) === String(playerId) ? 'Deine Aufgaben' : `Aufgaben von ${pname}`}</div>`;
     // Filtered active tasks
     let filtered = [];
     if (filter === 'all') {
-      filtered = tasks.filter(t => t.player === pid && t.status !== 'done');
+      filtered = tasks.filter(t => String(t.player) === String(pid) && t.status !== 'done');
     } else if (filter === 'offen') {
-      filtered = tasks.filter(t => t.player === pid && t.status === 'open');
+      filtered = tasks.filter(t => String(t.player) === String(pid) && t.status === 'open');
     } else if (filter === 'eingereicht') {
-      filtered = tasks.filter(t => t.player === pid && t.status === 'submitted');
+      filtered = tasks.filter(t => String(t.player) === String(pid) && t.status === 'submitted');
     }
     // --- Sort active tasks ---
     filtered = filtered.slice().sort((a, b) => {

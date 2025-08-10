@@ -4,6 +4,7 @@ body {
   color: #f3f3f3;
   padding: 0;
   margin: 0;
+  overflow-x: hidden;
 }
 
 #player-select-bar {
@@ -63,7 +64,9 @@ h1 {
   gap: 2.5rem;
   margin-top: 2.5rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 section {
@@ -333,8 +336,10 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
   margin-bottom: 2em;
   min-width: 260px;
   max-width: 340px;
+  width: 340px;
   color: #fff;
   font-size: 1.08em;
+  box-sizing: border-box;
 }
 .scoreboard-box h4 {
   color: #ffb347;
@@ -398,8 +403,10 @@ label[for='difficulty-scale'] {
   margin-bottom: 2em;
   min-width: 260px;
   max-width: 340px;
+  width: 340px;
   color: #fff;
   font-size: 1.08em;
+  box-sizing: border-box;
 }
 
 .personal-notes-box h3 {

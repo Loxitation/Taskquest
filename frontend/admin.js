@@ -30,7 +30,7 @@ async function checkAuth() {
         currentUser = await response.json();
         
         if (currentUser.role !== 'admin') {
-            alert('Access denied. Admin role required.');
+            alert('Zugriff verweigert. Admin-Berechtigung erforderlich.');
             window.location.href = '/';
             return;
         }
@@ -67,11 +67,11 @@ async function loadUsers() {
             users = await response.json();
             renderUsersTable();
         } else {
-            showAlert('Failed to load users', 'error');
+            showAlert('Fehler beim Laden der Benutzer', 'error');
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        showAlert('Error loading users', 'error');
+        showAlert('Fehler beim Laden der Benutzer', 'error');
     }
 }
 
@@ -103,12 +103,12 @@ function renderUsersTable() {
                     <button class="btn ${user.role === 'admin' ? 'btn-warning' : 'btn-success'}" 
                             style="font-size: 0.8rem; padding: 0.25rem 0.5rem; margin-right: 0.5rem;" 
                             onclick="toggleUserRole(${user.id}, '${user.role}')">
-                        ${user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                        ${user.role === 'admin' ? 'Admin entziehen' : 'Admin machen'}
                     </button>
                     <button class="btn btn-danger" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="deleteUser(${user.id})">
-                        Delete
+                        Löschen
                     </button>
-                ` : '<span style="color: #6b7280; font-size: 0.8rem;">Current User</span>'}
+                ` : '<span style="color: #6b7280; font-size: 0.8rem;">Aktueller Benutzer</span>'}
             </td>
         `;
         tbody.appendChild(row);
@@ -117,7 +117,7 @@ function renderUsersTable() {
 
 // Delete user
 async function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (!confirm('Sind Sie sicher, dass Sie diesen Benutzer löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
         return;
     }
 
@@ -128,24 +128,24 @@ async function deleteUser(userId) {
         });
 
         if (response.ok) {
-            showAlert('User deleted successfully');
+            showAlert('Benutzer erfolgreich gelöscht');
             await loadUsers();
         } else {
             const error = await response.json();
-            showAlert(error.error || 'Failed to delete user', 'error');
+            showAlert(error.error || 'Fehler beim Löschen des Benutzers', 'error');
         }
     } catch (error) {
         console.error('Error deleting user:', error);
-        showAlert('Error deleting user', 'error');
+        showAlert('Fehler beim Löschen des Benutzers', 'error');
     }
 }
 
 // Toggle user role between admin and user
 async function toggleUserRole(userId, currentRole) {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const action = newRole === 'admin' ? 'grant admin access to' : 'revoke admin access from';
+    const action = newRole === 'admin' ? 'Admin-Rechte gewähren für' : 'Admin-Rechte entziehen von';
     
-    if (!confirm(`Are you sure you want to ${action} this user?`)) {
+    if (!confirm(`Sind Sie sicher, dass Sie ${action} diesen Benutzer möchten?`)) {
         return;
     }
 
@@ -160,45 +160,15 @@ async function toggleUserRole(userId, currentRole) {
         });
 
         if (response.ok) {
-            showAlert(`User role updated to ${newRole} successfully`);
+            showAlert(`Benutzerrolle erfolgreich zu ${newRole === 'admin' ? 'Administrator' : 'Benutzer'} geändert`);
             await loadUsers();
         } else {
             const error = await response.json();
-            showAlert(error.error || 'Failed to update user role', 'error');
+            showAlert(error.error || 'Fehler beim Aktualisieren der Benutzerrolle', 'error');
         }
     } catch (error) {
         console.error('Error updating user role:', error);
-        showAlert('Error updating user role', 'error');
-    }
-}
-
-// Toggle user role between admin and user
-async function toggleUserRole(userId, currentRole) {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const action = newRole === 'admin' ? 'grant admin privileges to' : 'revoke admin privileges from';
-    
-    if (!confirm(`Are you sure you want to ${action} this user?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ role: newRole })
-        });
-
-        if (response.ok) {
-            showAlert(`User role updated to ${newRole}`, 'success');
-            await loadUsers(); // Reload the users table
-        } else {
-            const error = await response.json();
-            showAlert(error.error || 'Failed to update user role', 'error');
-        }
-    } catch (error) {
-        console.error('Error updating user role:', error);
-        showAlert('Error updating user role', 'error');
+        showAlert('Fehler beim Aktualisieren der Benutzerrolle', 'error');
     }
 }
 
@@ -213,11 +183,11 @@ async function loadConfig() {
             config = await response.json();
             renderConfigGrid();
         } else {
-            showAlert('Failed to load configuration', 'error');
+            showAlert('Fehler beim Laden der Konfiguration', 'error');
         }
     } catch (error) {
         console.error('Error loading config:', error);
-        showAlert('Error loading configuration', 'error');
+        showAlert('Fehler beim Laden der Konfiguration', 'error');
     }
 }
 
@@ -446,9 +416,9 @@ async function saveLevelTitles() {
         });
         
         if (response.ok) {
-            showAlert('Level titles updated successfully');
+            showAlert('Level-Titel erfolgreich aktualisiert');
         } else {
-            showAlert('Failed to update level titles', 'error');
+            showAlert('Fehler beim Aktualisieren der Level-Titel', 'error');
         }
     } catch (error) {
         console.error('Error saving level titles:', error);
@@ -464,7 +434,7 @@ async function loadRewards() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to load rewards');
+            throw new Error('Fehler beim Laden der Belohnungen');
         }
         
         rewards = await response.json();
@@ -513,7 +483,7 @@ function renderRewards() {
                     <div>
                         <label style="color: #f3f3f3; font-size: 0.9rem;">Bonus EXP:</label>
                         <input type="number" placeholder="Bonus EXP" value="${reward.bonus_exp || 0}" 
-                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
                                onchange="updateRewardFieldDB(${reward.id}, 'bonus_exp', parseInt(this.value))" />
                     </div>
                 `;
@@ -522,12 +492,12 @@ function renderRewards() {
                     <div>
                         <label style="color: #f3f3f3; font-size: 0.9rem;">Anzahl Aufgaben:</label>
                         <input type="number" placeholder="Anzahl" value="${reward.requirement_count || 1}" 
-                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
                                onchange="updateRewardFieldDB(${reward.id}, 'requirement_count', parseInt(this.value))" />
                     </div>
                     <div>
                         <label style="color: #f3f3f3; font-size: 0.9rem;">Wiederholbar:</label>
-                        <select style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;"
+                        <select style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;"
                                 onchange="updateRewardFieldDB(${reward.id}, 'is_repeatable', this.value === 'true')">
                             <option value="false" ${!reward.is_repeatable ? 'selected' : ''}>Nein</option>
                             <option value="true" ${reward.is_repeatable ? 'selected' : ''}>Ja</option>
@@ -538,7 +508,7 @@ function renderRewards() {
                 typeSpecificFields = `
                     <div>
                         <label style="color: #f3f3f3; font-size: 0.9rem;">Einmalig erreichbar:</label>
-                        <select style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;"
+                        <select style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;"
                                 onchange="updateRewardFieldDB(${reward.id}, 'is_one_time', this.value === 'true')">
                             <option value="true" ${reward.is_one_time ? 'selected' : ''}>Ja</option>
                             <option value="false" ${!reward.is_one_time ? 'selected' : ''}>Nein</option>
@@ -548,36 +518,44 @@ function renderRewards() {
             }
             
             rewardDiv.innerHTML = `
-                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 0.8rem;">
-                    <h5 style="color: #ffb347; margin: 0;">${reward.icon || '🏆'} ${reward.name || 'Unbenannt'}</h5>
-                    <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <h5 style="color: #ffb347; margin: 0; flex-grow: 1; margin-right: 1rem;">${reward.icon || '🏆'} ${reward.name || 'Unbenannt'}</h5>
+                    <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-sm" onclick="toggleRewardActive(${reward.id})" 
-                                style="margin-right: 0.5rem; background: ${reward.active ? '#28a745' : '#6c757d'};">
+                                style="background: ${reward.active ? '#28a745' : '#6c757d'}; color: white; padding: 0.25rem 0.75rem;">
                             ${reward.active ? 'Aktiv' : 'Inaktiv'}
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteReward(${reward.id})">
+                        <button class="btn btn-danger btn-sm" onclick="deleteReward(${reward.id})" style="padding: 0.25rem 0.5rem;">
                             🗑️
                         </button>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
-                    <div>
+                <div style="margin-bottom: 0.8rem;">
+                    <div style="margin-bottom: 0.5rem;">
                         <label style="color: #f3f3f3; font-size: 0.9rem;">Name:</label>
                         <input type="text" placeholder="Belohnungsname" value="${reward.name || ''}" 
-                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
                                onchange="updateRewardFieldDB(${reward.id}, 'name', this.value)" />
                     </div>
-                    <div>
-                        <label style="color: #f3f3f3; font-size: 0.9rem;">Icon:</label>
-                        <input type="text" placeholder="🏆" value="${reward.icon || '🏆'}" 
-                               style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" 
-                               onchange="updateRewardFieldDB(${reward.id}, 'icon', this.value)" />
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <label style="color: #f3f3f3; font-size: 0.9rem;">Icon:</label>
+                            <input type="text" placeholder="🏆" value="${reward.icon || '🏆'}" 
+                                   style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
+                                   onchange="updateRewardFieldDB(${reward.id}, 'icon', this.value)" />
+                        </div>
+                        <div>
+                            <label style="color: #f3f3f3; font-size: 0.9rem;">Level:</label>
+                            <input type="number" placeholder="Level" value="${reward.level || 1}" min="1" max="10" 
+                                   style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
+                                   onchange="updateRewardFieldDB(${reward.id}, 'level', parseInt(this.value))" />
+                        </div>
                     </div>
                 </div>
                 <div style="margin-bottom: 0.8rem;">
                     <label style="color: #f3f3f3; font-size: 0.9rem;">Beschreibung:</label>
                     <input type="text" placeholder="Beschreibung" value="${reward.description || ''}" 
-                           style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3; box-sizing: border-box;" 
                            onchange="updateRewardFieldDB(${reward.id}, 'description', this.value)" />
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">
@@ -612,7 +590,7 @@ async function updateRewardFieldDB(rewardId, field, value) {
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Failed to save reward');
+                    throw new Error('Fehler beim Speichern der Belohnung');
                 }
             } catch (error) {
                 console.error('Error saving reward:', error);
@@ -642,7 +620,7 @@ async function toggleRewardActive(rewardId) {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to toggle reward status');
+            throw new Error('Fehler beim Ändern des Belohnungsstatus');
         }
         
         renderRewards();
@@ -666,7 +644,7 @@ async function deleteReward(rewardId) {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to delete reward');
+            throw new Error('Fehler beim Löschen der Belohnung');
         }
         
         // Remove from local array
@@ -740,7 +718,8 @@ async function addReward() {
             is_repeatable: false,
             is_one_time: true,
             icon: '🏆',
-            color: '#FFD700'
+            color: '#FFD700',
+            level: 1
         };
         
         const response = await fetch('/api/admin/rewards', {
@@ -753,7 +732,7 @@ async function addReward() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to create reward');
+            throw new Error('Fehler beim Erstellen der Belohnung');
         }
         
         const result = await response.json();

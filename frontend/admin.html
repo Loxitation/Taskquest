@@ -241,6 +241,15 @@
             margin-top: 1rem;
         }
 
+        #rewards-list {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 1rem;
+            background: rgba(255,179,71,0.02);
+        }
+
         .reward-item {
             border: 1px solid #e2e8f0;
             border-radius: 5px;
@@ -253,6 +262,12 @@
             margin-bottom: 0.5rem;
             background: white;
             color: #1f2937;
+            box-sizing: border-box !important;
+        }
+
+        .reward-item input[style*="width: 100%"] {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
 
         .modal {
@@ -285,6 +300,33 @@
 
         .close:hover {
             color: black;
+        }
+
+        .config-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .config-category {
+            background: rgba(255,179,71,0.03);
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 200px;
+        }
+
+        .config-category h4 {
+            color: #ffb347;
+            margin-bottom: 1rem;
+            margin-top: 0;
+        }
+
+        .config-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
         .nav-bar {
@@ -398,15 +440,15 @@
                 <thead>
                     <tr>
                         <th>Level</th>
-                        <th>Title</th>
-                        <th>Actions</th>
+                        <th>Titel</th>
+                        <th>Aktionen</th>
                     </tr>
                 </thead>
                 <tbody id="level-titles-tbody">
                 </tbody>
             </table>
-            <button class="btn btn-primary" onclick="addLevelTitle()">Add Level Title</button>
-            <button class="btn btn-success" onclick="saveLevelTitles()">Save All Titles</button>
+            <button class="btn btn-primary" onclick="addLevelTitle()">Level-Titel hinzufügen</button>
+            <button class="btn btn-success" onclick="saveLevelTitles()">Alle Titel speichern</button>
         </div>
 
     </div>

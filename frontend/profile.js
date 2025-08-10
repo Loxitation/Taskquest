@@ -53,7 +53,7 @@ async function loadUserProfile() {
         
     } catch (error) {
         console.error('Error loading profile:', error);
-        showAlert('Error loading profile data', 'error');
+        showAlert('Fehler beim Laden der Profildaten', 'error');
     }
 }
 
@@ -122,12 +122,12 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
         });
         
         if (response.ok) {
-            showAlert('Profile updated successfully');
+            showAlert('Profil erfolgreich aktualisiert');
             // Update current user data
             currentUser.profile_settings = profile_settings;
         } else {
             const data = await response.json();
-            showAlert(data.error || 'Failed to update profile', 'error');
+            showAlert(data.error || 'Fehler beim Aktualisieren des Profils', 'error');
         }
     } catch (error) {
         console.error('Error updating profile:', error);

@@ -31,6 +31,7 @@ const rewardsDb = new sqlite3.Database(path.join(__dirname, 'rewards.db'), (err)
     requirement_count INTEGER DEFAULT 1,
     is_repeatable BOOLEAN DEFAULT FALSE,
     is_one_time BOOLEAN DEFAULT TRUE,
+    level INTEGER DEFAULT 1,
     icon TEXT DEFAULT '🎯',
     color TEXT DEFAULT '#FFD700',
     active BOOLEAN DEFAULT TRUE,
@@ -49,18 +50,18 @@ const rewardsDb = new sqlite3.Database(path.join(__dirname, 'rewards.db'), (err)
         if (!err && result.count === 0) {
           console.log('Inserting default rewards...');
           const defaultRewards = [
-            ['Früher Vogel', 'bonus', 'Aufgabe vor Fälligkeit erledigt', 10, 1, 1, '🌅'],
-            ['Perfektionist', 'bonus', 'Aufgabe mit höchster Qualität abgeschlossen', 15, 1, 1, '⭐'],
-            ['Blitzschnell', 'bonus', 'Aufgabe in unter 30 Minuten erledigt', 20, 1, 1, '⚡'],
-            ['Fleißig', 'milestone', '10 Aufgaben abgeschlossen', 50, 10, 1, '💪'],
-            ['Produktiv', 'milestone', '25 Aufgaben abgeschlossen', 100, 25, 1, '🔥'],
-            ['Unaufhaltsam', 'milestone', '50 Aufgaben abgeschlossen', 200, 50, 1, '🚀'],
-            ['Erste Aufgabe', 'achievement', 'Deine allererste Aufgabe erledigt', 25, 1, 0, '🎯'],
-            ['Level 5 erreicht', 'achievement', 'Du hast Level 5 erreicht!', 100, 1, 0, '🏅'],
-            ['Eine Woche aktiv', 'achievement', '7 Tage in Folge Aufgaben erledigt', 150, 1, 0, '📅']
+            ['Früher Vogel', 'bonus', 'Aufgabe vor Fälligkeit erledigt', 10, 1, 1, 1, '🌅'],
+            ['Perfektionist', 'bonus', 'Aufgabe mit höchster Qualität abgeschlossen', 15, 1, 1, 3, '⭐'],
+            ['Blitzschnell', 'bonus', 'Aufgabe in unter 30 Minuten erledigt', 20, 1, 1, 2, '⚡'],
+            ['Fleißig', 'milestone', '10 Aufgaben abgeschlossen', 50, 10, 1, 1, '💪'],
+            ['Produktiv', 'milestone', '25 Aufgaben abgeschlossen', 100, 25, 1, 3, '🔥'],
+            ['Unaufhaltsam', 'milestone', '50 Aufgaben abgeschlossen', 200, 50, 1, 5, '🚀'],
+            ['Erste Aufgabe', 'achievement', 'Deine allererste Aufgabe erledigt', 25, 1, 0, 1, '🎯'],
+            ['Level 5 erreicht', 'achievement', 'Du hast Level 5 erreicht!', 100, 1, 0, 5, '🏅'],
+            ['Eine Woche aktiv', 'achievement', '7 Tage in Folge Aufgaben erledigt', 150, 1, 0, 2, '📅']
           ];
           
-          const stmt = rewardsDb.prepare('INSERT OR IGNORE INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, icon) VALUES (?, ?, ?, ?, ?, ?, ?)');
+          const stmt = rewardsDb.prepare('INSERT OR IGNORE INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, level, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
           defaultRewards.forEach(reward => {
             stmt.run(reward);
           });
@@ -490,10 +491,10 @@ app.post('/api/admin/rewards', requireAdmin, (req, res) => {
   console.log('Create reward endpoint accessed from:', req.ip);
   console.log('Request body:', req.body);
   
-  const { name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, icon, color } = req.body;
+  const { name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, level, icon, color } = req.body;
   
-  const sql = `INSERT INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, icon, color, created_by) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO rewards (name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, level, icon, color, created_by) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   
   rewardsDb.run(sql, [
     name, type, description, 
@@ -501,6 +502,7 @@ app.post('/api/admin/rewards', requireAdmin, (req, res) => {
     requirement_count || 1, 
     is_repeatable ? 1 : 0,
     is_one_time ? 1 : 0,
+    level || 1,
     icon || '🏆',
     color || '#FFD700',
     req.session.userId
@@ -516,11 +518,11 @@ app.post('/api/admin/rewards', requireAdmin, (req, res) => {
 // Update reward
 app.put('/api/admin/rewards/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, icon, color, active } = req.body;
+  const { name, type, description, bonus_exp, requirement_count, is_repeatable, is_one_time, level, icon, color, active } = req.body;
   
   const sql = `UPDATE rewards SET 
                name = ?, type = ?, description = ?, bonus_exp = ?, requirement_count = ?, 
-               is_repeatable = ?, is_one_time = ?, icon = ?, color = ?, active = ?, updated_at = CURRENT_TIMESTAMP
+               is_repeatable = ?, is_one_time = ?, level = ?, icon = ?, color = ?, active = ?, updated_at = CURRENT_TIMESTAMP
                WHERE id = ?`;
   
   rewardsDb.run(sql, [
@@ -529,6 +531,7 @@ app.put('/api/admin/rewards/:id', requireAdmin, (req, res) => {
     requirement_count || 1,
     is_repeatable ? 1 : 0,
     is_one_time ? 1 : 0,
+    level || 1,
     icon || '🏆',
     color || '#FFD700',
     active ? 1 : 0,
