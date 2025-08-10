@@ -1,5 +1,6 @@
 // Authentication middleware
 const session = require('express-session');
+const { getUserById } = require('./auth.db.js');
 
 // Session configuration
 const sessionConfig = {
@@ -22,24 +23,51 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-// Middleware to check if user is admin
+// Middleware to check if user is admin (checks database for current role)
 const requireAdmin = (req, res, next) => {
-  if (req.session && req.session.userId && req.session.role === 'admin') {
-    return next();
-  } else {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
+  
+  // Check database for current role to handle role changes
+  getUserById(req.session.userId, (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    if (user.role === 'admin') {
+      // Update session with current role for consistency
+      req.session.role = user.role;
+      return next();
+    } else {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+  });
 };
 
 // Middleware to check if user is admin or the user themselves
 const requireAdminOrSelf = (req, res, next) => {
-  if (req.session && req.session.userId) {
-    const targetUserId = parseInt(req.params.userId) || parseInt(req.body.userId);
-    if (req.session.role === 'admin' || req.session.userId === targetUserId) {
-      return next();
-    }
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
-  return res.status(403).json({ error: 'Access denied' });
+  
+  const targetUserId = parseInt(req.params.userId) || parseInt(req.body.userId);
+  
+  // Check database for current role to handle role changes
+  getUserById(req.session.userId, (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    // Update session with current role for consistency
+    req.session.role = user.role;
+    
+    if (user.role === 'admin' || req.session.userId === targetUserId) {
+      return next();
+    } else {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  });
 };
 
 // Get current user info from session

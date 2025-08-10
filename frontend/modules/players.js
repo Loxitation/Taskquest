@@ -1,6 +1,5 @@
 // Player-related logic for TaskQuest
 import { getPlayers, getPlayerStats } from './api.js';
-import { archive } from './tasks.js';
 
 export let players = [];
 export let playerStats = [];
@@ -17,12 +16,17 @@ export function getPlayerById(id) {
 }
 
 export function getPlayerStatsById(id) {
-  const base = playerStats.find(s => String(s.id) === String(id)) || { id, name: '', exp: 0, claimedRewards: [] };
-  // Sum minutesWorked from all archived tasks for this player
-  let totalMinutes = 0;
-  if (Array.isArray(archive)) {
-    totalMinutes = archive.filter(t => (String(t.player) === String(id) || String(t.playerId) === String(id)) && t.status === 'done' && t.minutesWorked)
-      .reduce((sum, t) => sum + (parseInt(t.minutesWorked) || 0), 0);
+  const stats = playerStats.find(s => String(s.id) === String(id));
+  if (stats) {
+    return stats;
   }
-  return { ...base, minutesWorked: totalMinutes };
+  
+  // Fallback for players without stats
+  return { 
+    id, 
+    name: '', 
+    exp: 0, 
+    claimedRewards: [], 
+    minutesWorked: 0 
+  };
 }

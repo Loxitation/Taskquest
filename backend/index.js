@@ -356,6 +356,14 @@ app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
     if (this.changes === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+    
+    // If role was updated, update any active sessions for this user
+    if (role !== undefined) {
+      // Note: In a production app, you'd want to track sessions in a database
+      // For now, we'll let the user refresh their session by re-logging in
+      console.log(`User ${userId} role updated to ${role}. User should refresh their session.`);
+    }
+    
     res.json({ success: true });
   });
 });
@@ -501,6 +509,54 @@ app.get('/api/system/status', requireAuth, (req, res) => {
       role: req.session.role
     },
     timestamp: new Date().toISOString()
+  });
+});
+
+// Get player statistics including total time worked
+app.get('/api/player-stats', requireAuth, (req, res) => {
+  // Get all users with their stats
+  authDb.all('SELECT id, username, exp, claimed_rewards FROM users', (err, users) => {
+    if (err) {
+      console.error('Get users error:', err);
+      return res.status(500).json({ error: 'Failed to get users' });
+    }
+    
+    // For each user, calculate total minutes worked from tasks
+    const userPromises = users.map(user => {
+      return new Promise((resolve) => {
+        tasksDb.get(
+          'SELECT COALESCE(SUM(minutesWorked), 0) as totalMinutes FROM tasks WHERE player = ?',
+          [user.id],
+          (err, result) => {
+            if (err) {
+              console.error('Get time worked error for user', user.id, ':', err);
+              resolve({
+                id: user.id,
+                name: user.username,
+                exp: user.exp || 0,
+                claimedRewards: user.claimed_rewards ? JSON.parse(user.claimed_rewards) : [],
+                minutesWorked: 0
+              });
+            } else {
+              resolve({
+                id: user.id,
+                name: user.username,
+                exp: user.exp || 0,
+                claimedRewards: user.claimed_rewards ? JSON.parse(user.claimed_rewards) : [],
+                minutesWorked: result.totalMinutes || 0
+              });
+            }
+          }
+        );
+      });
+    });
+    
+    Promise.all(userPromises).then(stats => {
+      res.json(stats);
+    }).catch(error => {
+      console.error('Error calculating player stats:', error);
+      res.status(500).json({ error: 'Failed to calculate player stats' });
+    });
   });
 });
 
