@@ -201,7 +201,7 @@ function renderConfigGrid() {
     };
     
     config.forEach(item => {
-        if (item.config_key.includes('exp_')) {
+        if (item.config_key.includes('exp_') || item.config_key.includes('level_')) {
             categories.exp.push(item);
         } else if (item.config_key.includes('reward')) {
             categories.rewards.push(item);

@@ -132,6 +132,193 @@ const io = new Server(server);
 createNotificationsTable();
 createTasksTable();
 
+// Database migration and schema validation
+async function validateAndMigrateDatabase() {
+  console.log('Starting database schema validation and migration...');
+  
+  // Define expected schemas for all tables
+  const expectedSchemas = {
+    tasks: {
+      id: 'INTEGER PRIMARY KEY',
+      name: 'TEXT',
+      difficulty: 'INTEGER',
+      urgency: 'INTEGER',
+      dueDate: 'TEXT',
+      player: 'TEXT',
+      status: 'TEXT',
+      added: 'TEXT',
+      confirmedBy: 'TEXT',
+      minutesWorked: 'INTEGER',
+      note: 'TEXT',
+      hours: 'INTEGER',
+      commentary: 'TEXT',
+      completedAt: 'TEXT',
+      approver: 'TEXT',
+      rating: 'INTEGER',
+      answerCommentary: 'TEXT',
+      exp: 'INTEGER',
+      archived: 'INTEGER DEFAULT 0',
+      waitingForApproval: 'INTEGER DEFAULT 0'
+    },
+    users: {
+      id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+      username: 'TEXT UNIQUE NOT NULL',
+      password: 'TEXT NOT NULL',
+      role: 'TEXT DEFAULT \'user\'',
+      email: 'TEXT',
+      created_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP',
+      last_login: 'DATETIME',
+      profile_settings: 'TEXT',
+      gotify_url: 'TEXT',
+      gotify_token: 'TEXT',
+      is_active: 'INTEGER DEFAULT 1',
+      exp: 'INTEGER DEFAULT 0',
+      claimed_rewards: 'TEXT DEFAULT \'[]\'',
+      player_settings: 'TEXT DEFAULT \'{}\''
+    },
+    admin_config: {
+      id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+      config_key: 'TEXT UNIQUE NOT NULL',
+      config_value: 'TEXT',
+      description: 'TEXT',
+      updated_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP',
+      updated_by: 'INTEGER'
+    },
+    rewards: {
+      id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+      name: 'TEXT NOT NULL',
+      type: 'TEXT NOT NULL CHECK (type IN (\'bonus\', \'milestone\', \'achievement\'))',
+      description: 'TEXT',
+      bonus_exp: 'INTEGER DEFAULT 0',
+      requirement_count: 'INTEGER DEFAULT 1',
+      is_repeatable: 'BOOLEAN DEFAULT FALSE',
+      is_one_time: 'BOOLEAN DEFAULT TRUE',
+      level: 'INTEGER DEFAULT 1',
+      icon: 'TEXT DEFAULT \'🎯\'',
+      color: 'TEXT DEFAULT \'#FFD700\'',
+      active: 'BOOLEAN DEFAULT TRUE',
+      created_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP',
+      created_by: 'INTEGER'
+    },
+    notifications: {
+      id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+      taskId: 'INTEGER',
+      player: 'TEXT',
+      message: 'TEXT',
+      timestamp: 'DATETIME DEFAULT CURRENT_TIMESTAMP'
+    }
+  };
+
+  // Function to check and add missing columns
+  const checkAndAddColumns = (db, tableName, expectedColumns) => {
+    return new Promise((resolve, reject) => {
+      db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
+        if (err) {
+          console.error(`Error getting table info for ${tableName}:`, err);
+          return reject(err);
+        }
+
+        const existingColumns = columns.map(col => col.name);
+        const missingColumns = Object.keys(expectedColumns).filter(col => !existingColumns.includes(col));
+
+        if (missingColumns.length === 0) {
+          console.log(`✅ Table ${tableName} schema is up to date`);
+          return resolve();
+        }
+
+        console.log(`🔧 Adding missing columns to ${tableName}:`, missingColumns);
+        
+        const alterPromises = missingColumns.map(column => {
+          return new Promise((resolveAlter, rejectAlter) => {
+            const columnDef = expectedColumns[column];
+            db.run(`ALTER TABLE ${tableName} ADD COLUMN ${column} ${columnDef}`, (err) => {
+              if (err) {
+                console.error(`Error adding column ${column} to ${tableName}:`, err);
+                rejectAlter(err);
+              } else {
+                console.log(`✅ Added column ${column} to ${tableName}`);
+                resolveAlter();
+              }
+            });
+          });
+        });
+
+        Promise.all(alterPromises).then(resolve).catch(reject);
+      });
+    });
+  };
+
+  try {
+    // Check all databases and tables
+    await checkAndAddColumns(tasksDb, 'tasks', expectedSchemas.tasks);
+    await checkAndAddColumns(authDb, 'users', expectedSchemas.users);
+    await checkAndAddColumns(authDb, 'admin_config', expectedSchemas.admin_config);
+    await checkAndAddColumns(rewardsDb, 'rewards', expectedSchemas.rewards);
+    await checkAndAddColumns(notificationsDb, 'notifications', expectedSchemas.notifications);
+    
+    console.log('✅ Database schema validation and migration completed successfully');
+  } catch (error) {
+    console.error('❌ Database migration failed:', error);
+  }
+}
+
+// Fix orphaned tasks with invalid approvers
+async function fixInvalidApprovers() {
+  console.log('Checking for tasks with invalid approvers...');
+  
+  return new Promise((resolve) => {
+    // Get all users to check valid approver IDs
+    authDb.all('SELECT id FROM users WHERE is_active = 1', (err, users) => {
+      if (err) {
+        console.error('Error getting users for approver validation:', err);
+        return resolve();
+      }
+      
+      const validUserIds = users.map(u => String(u.id));
+      
+      // Check tasks with approvers that are not '__anyone__' or valid user IDs
+      tasksDb.all('SELECT id, approver FROM tasks WHERE status = ? AND archived = 0', ['submitted'], (err, tasks) => {
+        if (err) {
+          console.error('Error checking tasks for invalid approvers:', err);
+          return resolve();
+        }
+        
+        const tasksToFix = tasks.filter(task => {
+          return task.approver && 
+                 task.approver !== '__anyone__' && 
+                 !validUserIds.includes(String(task.approver));
+        });
+        
+        if (tasksToFix.length === 0) {
+          console.log('✅ All task approvers are valid');
+          return resolve();
+        }
+        
+        console.log(`🔧 Fixing ${tasksToFix.length} tasks with invalid approvers...`);
+        
+        const fixPromises = tasksToFix.map(task => {
+          return new Promise((resolveFix) => {
+            tasksDb.run('UPDATE tasks SET approver = ? WHERE id = ?', ['__anyone__', task.id], (err) => {
+              if (err) {
+                console.error(`Error fixing approver for task ${task.id}:`, err);
+              } else {
+                console.log(`✅ Fixed approver for task ${task.id} (was: ${task.approver}, now: __anyone__)`);
+              }
+              resolveFix();
+            });
+          });
+        });
+        
+        Promise.all(fixPromises).then(() => {
+          console.log('✅ All invalid approvers have been fixed');
+          resolve();
+        });
+      });
+    });
+  });
+}
+
 // Initialize auth tables and defaults asynchronously
 (async () => {
   try {
@@ -142,6 +329,10 @@ createTasksTable();
     console.log('Admin config table created successfully');
     await initializeDefaults();
     console.log('Authentication system initialized successfully');
+    
+    // Run database migrations and fixes
+    await validateAndMigrateDatabase();
+    await fixInvalidApprovers();
     
     // Sync user databases to ensure consistency
     setTimeout(() => {
@@ -580,12 +771,12 @@ app.get('/api/player-stats', requireAuth, (req, res) => {
       return res.status(500).json({ error: 'Failed to get users' });
     }
     
-    // For each user, calculate total minutes worked from tasks
+    // For each user, calculate total minutes worked from approved tasks only
     const userPromises = users.map(user => {
       return new Promise((resolve) => {
         tasksDb.get(
-          'SELECT COALESCE(SUM(minutesWorked), 0) as totalMinutes FROM tasks WHERE player = ?',
-          [user.id],
+          'SELECT COALESCE(SUM(minutesWorked), 0) as totalMinutes FROM tasks WHERE player = ? AND status = ? AND archived = 1',
+          [user.id, 'done'],
           (err, result) => {
             if (err) {
               console.error('Get time worked error for user', user.id, ':', err);
