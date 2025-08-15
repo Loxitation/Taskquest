@@ -29,6 +29,15 @@ window.addEventListener('load', async () => {
                 await loadConfig();
                 await loadLevelTitles();
                 await loadRewards();
+                
+                // Show default tab (users) and render initial content
+                showTab('users');
+                
+                // Ensure config grid is rendered after tabs are set up
+                if (config && config.length > 0) {
+                    renderConfigGrid();
+                }
+                
                 return;
             }
         }
@@ -131,6 +140,15 @@ window.showTab = function(tabName) {
     const selectedButton = event?.target || document.querySelector(`[onclick="showTab('${tabName}')"]`);
     if (selectedButton) {
         selectedButton.classList.add('active');
+    }
+    
+    // Tab-specific initialization
+    if (tabName === 'rewards') {
+        renderRewards();
+    } else if (tabName === 'users') {
+        renderUsersTable();
+    } else if (tabName === 'level') {
+        renderLevelTitlesTable();
     }
 };
 
@@ -898,6 +916,15 @@ function openRewardEditModal(reward) {
                    style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" />
         </div>
         
+        <div style="margin-bottom: 1rem;">
+            <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Typ:</label>
+            <select id="reward_type" onchange="updateRewardFields()" style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;">
+                <option value="achievement" ${reward.type === 'achievement' ? 'selected' : ''}>Errungenschaft</option>
+                <option value="milestone" ${reward.type === 'milestone' ? 'selected' : ''}>Meilenstein</option>
+                <option value="bonus" ${reward.type === 'bonus' ? 'selected' : ''}>Bonus</option>
+            </select>
+        </div>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
                 <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Icon:</label>
@@ -917,7 +944,9 @@ function openRewardEditModal(reward) {
                    style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" />
         </div>
         
-        ${typeSpecificFields}
+        <div id="type-specific-fields">
+            ${typeSpecificFields}
+        </div>
         
         <div style="margin-bottom: 1rem;">
             <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Status:</label>
@@ -971,18 +1000,20 @@ async function saveRewardFromModal(rewardId) {
         
         // Update reward with form values
         reward.name = document.getElementById('reward_name').value;
+        reward.type = document.getElementById('reward_type').value;
         reward.icon = document.getElementById('reward_icon').value;
         reward.level = parseInt(document.getElementById('reward_level').value);
         reward.description = document.getElementById('reward_description').value;
         reward.active = document.getElementById('reward_active').value === 'true';
         
-        // Update type-specific fields
-        if (reward.type === 'bonus') {
+        // Update type-specific fields based on current type
+        const currentType = document.getElementById('reward_type').value;
+        if (currentType === 'bonus') {
             reward.bonus_exp = parseInt(document.getElementById('bonus_exp').value);
-        } else if (reward.type === 'milestone') {
+        } else if (currentType === 'milestone') {
             reward.requirement_count = parseInt(document.getElementById('requirement_count').value);
             reward.is_repeatable = document.getElementById('is_repeatable').value === 'true';
-        } else if (reward.type === 'achievement') {
+        } else if (currentType === 'achievement') {
             reward.is_one_time = document.getElementById('is_one_time').value === 'true';
         }
         
@@ -1047,6 +1078,54 @@ async function updateRewardFieldDB(rewardId, field, value) {
     } catch (error) {
         console.error('Error updating reward field:', error);
     }
+}
+
+// Update reward fields based on type selection
+function updateRewardFields() {
+    const typeSelect = document.getElementById('reward_type');
+    const typeSpecificContainer = document.getElementById('type-specific-fields');
+    
+    if (!typeSelect || !typeSpecificContainer) return;
+    
+    const selectedType = typeSelect.value;
+    let typeSpecificFields = '';
+    
+    if (selectedType === 'bonus') {
+        typeSpecificFields = `
+            <div style="margin-bottom: 1rem;">
+                <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Bonus XP:</label>
+                <input type="number" id="bonus_exp" value="0" 
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" />
+            </div>
+        `;
+    } else if (selectedType === 'milestone') {
+        typeSpecificFields = `
+            <div style="margin-bottom: 1rem;">
+                <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Anzahl Aufgaben:</label>
+                <input type="number" id="requirement_count" value="1" 
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;" />
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Wiederholbar:</label>
+                <select id="is_repeatable" style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;">
+                    <option value="false">Nein</option>
+                    <option value="true">Ja</option>
+                </select>
+            </div>
+        `;
+    } else { // achievement
+        typeSpecificFields = `
+            <div style="margin-bottom: 1rem;">
+                <label style="color: #f3f3f3; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Einmalig erreichbar:</label>
+                <select id="is_one_time" style="width: 100%; padding: 0.5rem; border: 1px solid #3a3a3a; border-radius: 4px; background: #232526; color: #f3f3f3;">
+                    <option value="true">Ja</option>
+                    <option value="false">Nein</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    typeSpecificContainer.innerHTML = typeSpecificFields;
 }
 
 // Toggle reward active status
@@ -1197,6 +1276,19 @@ async function addReward() {
 async function saveAllConfig() {
     const configData = {};
     
+    // Show loading state on save buttons
+    const saveButtons = document.querySelectorAll('.btn-success');
+    const originalStates = [];
+    
+    saveButtons.forEach((button, index) => {
+        originalStates[index] = {
+            text: button.textContent,
+            disabled: button.disabled
+        };
+        button.textContent = '💾 Speichere...';
+        button.disabled = true;
+    });
+    
     // Collect all config values from all categories, excluding rewards management inputs
     const selectors = [
         '#exp-config input, #exp-config select',
@@ -1226,20 +1318,48 @@ async function saveAllConfig() {
         
         if (response.ok) {
             showAlert('Konfiguration erfolgreich gespeichert');
-            // Reset save button
-            const saveButton = document.querySelector('.btn-success');
-            if (saveButton) {
-                saveButton.textContent = 'Alle Änderungen speichern';
-                saveButton.style.background = '#7ed957';
-            }
+            
+            // Enhanced save button feedback
+            const saveButtons = document.querySelectorAll('.btn-success');
+            saveButtons.forEach(button => {
+                const originalText = button.textContent;
+                const originalBg = button.style.background;
+                
+                // Show success state
+                button.textContent = '✅ Erfolgreich gespeichert';
+                button.style.background = '#22c55e';
+                button.style.transform = 'scale(1.02)';
+                button.disabled = true;
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = originalBg;
+                    button.style.transform = 'scale(1)';
+                    button.disabled = false;
+                }, 2000);
+            });
+            
             // Reload config to reflect changes
             await loadConfig();
         } else {
             showAlert('Fehler beim Speichern der Konfiguration', 'error');
+            
+            // Restore button states on error
+            saveButtons.forEach((button, index) => {
+                button.textContent = originalStates[index].text;
+                button.disabled = originalStates[index].disabled;
+            });
         }
     } catch (error) {
         console.error('Error saving config:', error);
         showAlert('Fehler beim Speichern der Konfiguration', 'error');
+        
+        // Restore button states on error
+        saveButtons.forEach((button, index) => {
+            button.textContent = originalStates[index].text;
+            button.disabled = originalStates[index].disabled;
+        });
     }
 }
 
@@ -1363,5 +1483,6 @@ window.autoSaveConfig = autoSaveConfig;
 window.logout = logout;
 window.openRewardEditModal = openRewardEditModal;
 window.saveRewardFromModal = saveRewardFromModal;
+window.updateRewardFields = updateRewardFields;
 window.resetApplication = resetApplication;
 window.updateLevelData = updateLevelData;

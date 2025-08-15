@@ -36,12 +36,12 @@ export function renderScoreboard(currentPlayerId) {
       const expPercent = expNeeded > 0 ? Math.min(100, Math.max(0, (expThisLevel / expNeeded) * 100)) : 0;
       return `<div style="background:${isCurrent?'#18191c':'#232526'};color:${isCurrent?'#7ed957':'#ffb347'};border:${isCurrent?'2px solid #7ed957':'none'};border-radius:12px;padding:1em;margin-bottom:1em;box-shadow:${isCurrent?'0 0 12px #7ed95744':''};">
         <div style="font-size:1.2em;font-weight:bold;">${p.name}</div>
-        <div style="font-size:1em;">Level: ${level} | XP: ${stats.exp||0}</div>
+        <div style="font-size:1em;">Level: ${level} | EXP: ${stats.exp||0}</div>
         <div class="exp-bar-label">EXP to next level</div>
         <div class="exp-bar-outer">
           <div class="exp-bar-inner" style="width:${expPercent}%;"></div>
         </div>
-        <div style="font-size:0.95em;color:#aaa;margin-bottom:0.2em;">${expThisLevel} / ${expNeeded} XP</div>
+        <div style="font-size:0.95em;color:#aaa;margin-bottom:0.2em;">${expThisLevel} / ${expNeeded} EXP</div>
         <div style="font-size:1em;">Zeit investiert: <b>${invested}</b></div>
       </div>`;
     }).join('');

@@ -5,168 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TaskQuest - Login</title>
     <link rel="icon" type="image/png" href="wizard-favicon.png">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-        }
-
-        .login-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .logo {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 1rem;
-            background: url('wizard-favicon.png') center/contain no-repeat;
-        }
-
-        h1 {
-            color: #4a5568;
-            margin-bottom: 2rem;
-            font-size: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #4a5568;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .login-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .login-btn:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .error-message {
-            background: #fed7d7;
-            color: #e53e3e;
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            display: none;
-        }
-
-        .loading {
-            display: none;
-            margin: 1rem 0;
-        }
-
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .info-text {
-            margin-top: 1.5rem;
-            color: #718096;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-
-        .info-text strong {
-            color: #4a5568;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="login-container">
-        <div class="logo"></div>
-        <h1>TaskQuest</h1>
-        
-        <div class="error-message" id="error-message"></div>
-        
-        <form id="login-form">
-            <div class="form-group">
-                <label for="username">Benutzername</label>
-                <input type="text" id="username" name="username" required autocomplete="username">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo"></div>
+                <h1 class="login-title">TaskQuest</h1>
+                <p class="login-subtitle">Willkommen zurück</p>
             </div>
             
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+            <div class="alert alert-error" id="error-message" style="display: none;"></div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Benutzername</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-full" id="login-btn">
+                    Anmelden
+                </button>
+            </form>
+            
+            <div class="loading text-center" id="loading" style="display: none;">
+                <div class="spinner"></div>
             </div>
             
-            <button type="submit" class="login-btn" id="login-btn">
-                Sign In
-            </button>
-        </form>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-        </div>
-        
-        <div class="info-text">
-            <strong>Default Login:</strong><br>
-            Benutzername: <strong>admin</strong><br>
-            Password: <strong>admin</strong><br>
-            <em>Please change the password after first login</em>
+            <div class="info-text text-center mt-6">
+                <strong>Standard-Login:</strong><br>
+                Benutzername: <strong>admin</strong><br>
+                Password: <strong>admin</strong><br>
+                <em>Bitte ändern Sie das Passwort nach dem ersten Login</em>
+            </div>
         </div>
     </div>
 

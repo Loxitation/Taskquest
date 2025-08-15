@@ -3,458 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskQuest - Admin-Panel</title>
+    <title>TaskQuest - Admin Panel</title>
     <link rel="icon" type="image/png" href="wizard-favicon.png">
     <link rel="stylesheet" href="style.css">
-    <style>
-        .admin-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: linear-gradient(120deg, #232526 0%, #18191c 100%);
-            min-height: 100vh;
-            color: #f3f3f3;
-        }
-
-        .admin-header {
-            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
-            color: #232526;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(255,179,71,0.3);
-        }
-
-        .admin-section {
-            background: linear-gradient(135deg, #232526 0%, #18191c 100%);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            border: 1px solid #3a3a3a;
-        }
-
-        .admin-section h3 {
-            color: #ffb347;
-            margin-bottom: 2rem;
-            text-align: center;
-            font-size: 1.8rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .tab-navigation {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-            background: rgba(35, 37, 38, 0.8);
-            padding: 0.5rem;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-        }
-
-        .tab-button {
-            background: transparent;
-            border: none;
-            color: #b0b0b0;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tab-button:hover {
-            background: rgba(255,179,71,0.1);
-            color: #ffb347;
-        }
-
-        .tab-button.active {
-            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
-            color: #232526;
-            font-weight: bold;
-        }
-
-        .config-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .config-item {
-            background: rgba(35, 37, 38, 0.8);
-            border: 1px solid #4a4a4a;
-            border-radius: 10px;
-            padding: 1.2rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .config-item:hover {
-            border-color: #ffb347;
-            transform: translateY(-2px);
-        }
-
-        .config-item label {
-            display: block;
-            color: #ffb347;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .config-item input,
-        .config-item select,
-        .config-item textarea {
-            width: 100%;
-            padding: 0.8rem;
-            border: 1px solid #555;
-            border-radius: 6px;
-            background: rgba(0,0,0,0.3);
-            color: #f3f3f3;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-        }
-
-        .config-item input:focus,
-        .config-item select:focus,
-        .config-item textarea:focus {
-            outline: none;
-            border-color: #ffb347;
-            box-shadow: 0 0 0 2px rgba(255,179,71,0.2);
-        }
-
-        .config-item small {
-            display: block;
-            color: #999;
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            line-height: 1.4;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .tab-content .admin-section {
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
-            color: #232526;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            box-shadow: 0 2px 8px rgba(255,179,71,0.3);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255,179,71,0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
-            color: white;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
-            color: white;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
-            color: white;
-        }
-
-        .users-table,
-        .level-titles-table,
-        .rewards-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(35, 37, 38, 0.8);
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        .users-table th,
-        .level-titles-table th,
-        .rewards-table th {
-            background: linear-gradient(135deg, #ffb347 0%, #ff8c42 100%);
-            color: #232526;
-            padding: 1rem;
-            text-align: left;
-            font-weight: bold;
-        }
-
-        .users-table td,
-        .level-titles-table td,
-        .rewards-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #444;
-            color: #f3f3f3;
-        }
-
-        .users-table tr:hover,
-        .level-titles-table tr:hover,
-        .rewards-table tr:hover {
-            background: rgba(255,179,71,0.1);
-        }
-
-        .login-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .login-form {
-            background: linear-gradient(135deg, #232526 0%, #18191c 100%);
-            padding: 3rem;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            border: 1px solid #3a3a3a;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        .login-form h2 {
-            color: #ffb347;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            color: #ffb347;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 1rem;
-            border: 1px solid #555;
-            border-radius: 8px;
-            background: rgba(0,0,0,0.3);
-            color: #f3f3f3;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #ffb347;
-            box-shadow: 0 0 0 2px rgba(255,179,71,0.2);
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            font-weight: 500;
-        }
-
-        .alert-success {
-            background: rgba(46, 213, 115, 0.2);
-            border: 1px solid #2ed573;
-            color: #2ed573;
-        }
-
-        .alert-error {
-            background: rgba(255, 71, 87, 0.2);
-            border: 1px solid #ff4757;
-            color: #ff4757;
-        }
-
-        .alert-info {
-            background: rgba(116, 185, 255, 0.2);
-            border: 1px solid #74b9ff;
-            color: #74b9ff;
-        }
-
-        @media (max-width: 768px) {
-            .config-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .tab-navigation {
-                flex-direction: column;
-            }
-            
-            .admin-container {
-                padding: 1rem;
-            }
-        }
-    </style>
 </head>
 <body>
-    <!-- Login Overlay -->
-    <div id="login-overlay" class="login-overlay">
-        <div class="login-form">
-            <h2>🔐 Admin Login</h2>
-            <form id="login-form">
+    <!-- Login Modal -->
+    <div id="login-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔐 Admin Login</h2>
+            </div>
+            <form id="login-form" class="admin-form">
                 <div class="form-group">
-                    <label for="username">Benutzername:</label>
-                    <input type="text" id="username" required>
+                    <label class="form-label" for="username">Benutzername:</label>
+                    <input type="text" id="username" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Passwort:</label>
-                    <input type="password" id="password" required>
+                    <label class="form-label" for="password">Passwort:</label>
+                    <input type="password" id="password" class="form-input" required>
                 </div>
-                <button type="submit" class="btn" style="width: 100%;">Anmelden</button>
+                <button type="submit" class="btn btn-primary w-full">Anmelden</button>
             </form>
-            <div id="login-error" style="display: none;" class="alert alert-error"></div>
+            <div id="login-error" style="display: none;" class="alert alert-error mt-4"></div>
         </div>
     </div>
 
-    <!-- Main Admin Content -->
-    <div class="admin-container" id="admin-content" style="display: none;">
-        <!-- Add user navigation similar to dashboard -->
-        <div id="user-nav" style="position: fixed; top: 1rem; right: 1rem; background: rgba(24, 25, 28, 0.95); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px); z-index: 1000; text-align: right;">
-            <!-- User info will be populated by JavaScript -->
-        </div>
+    <!-- Main Admin Interface -->
+    <div class="main-container" id="admin-content" style="display: none;">
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
         
-        <div class="admin-header">
-            <div style="text-align: center;">
-                <h1>🧙‍♂️ TaskQuest Admin Panel</h1>
-                <p>Systemverwaltung und Konfiguration</p>
-            </div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div class="tab-navigation">
-            <button class="tab-button active" onclick="showTab('users')">
-                👥 Benutzer
-            </button>
-            <button class="tab-button" onclick="showTab('general')">
-                ⚙️ Allgemein
-            </button>
-            <button class="tab-button" onclick="showTab('xp')">
-                💎 XP-System
-            </button>
-            <button class="tab-button" onclick="showTab('rewards')">
-                🏆 Belohnungen
-            </button>
-            <button class="tab-button" onclick="showTab('levels')">
-                📊 Level
-            </button>
-        </div>
-
-        <!-- Users Tab -->
-        <div id="users-tab" class="tab-content active">
-            <div class="admin-section">
-                <h3>👥 Benutzerverwaltung</h3>
-                <table class="users-table" id="users-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Benutzername</th>
-                            <th>Rolle</th>
-                            <th>Erstellt</th>
-                            <th>Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-tbody">
-                        <!-- Users will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- General Tab -->
-        <div id="general-tab" class="tab-content">
-            <div class="admin-section">
-                <h3>⚙️ Allgemeine Einstellungen</h3>
-                <div class="config-grid" id="general-config">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <a href="/" class="navbar-brand">
+                    🧙‍♂️ TaskQuest Admin
+                </a>
+                <div class="navbar-center">
+                    <span id="current-username" class="text-accent font-semibold"></span>
                 </div>
-                <button class="btn btn-danger" style="margin-top: 1rem;" onclick="resetApplication()">🔄 System zurücksetzen</button>
-                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
-            </div>
-        </div>
-
-        <!-- XP System Tab -->
-        <div id="xp-tab" class="tab-content">
-            <div class="admin-section">
-                <h3>💎 XP-System Einstellungen</h3>
-                <div class="config-grid" id="exp-config">
+                <div class="navbar-actions">
+                    <a href="/" class="btn btn-sm btn-outline">Dashboard</a>
+                    <a href="/profile.html" class="btn btn-sm btn-outline">Profil</a>
+                    <button onclick="logout()" class="btn btn-sm btn-danger">Logout</button>
                 </div>
-                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
             </div>
-        </div>
-
-        <!-- Rewards Tab -->
-        <div id="rewards-tab" class="tab-content">
-            <div class="admin-section">
-                <h3>🏆 Belohnungen</h3>
-                <div class="config-grid" id="rewards-config-section">
+        </nav>
+        
+        <div class="container">
+            <!-- Admin Tabs -->
+            <div class="tabs">
+                <div class="tab-nav">
+                    <button class="tab-button active" onclick="showTab('users')">
+                        👥 Benutzer
+                    </button>
+                    <button class="tab-button" onclick="showTab('general')">
+                        ⚙️ Allgemein
+                    </button>
+                    <button class="tab-button" onclick="showTab('xp')">
+                        💎 XP-System
+                    </button>
+                    <button class="tab-button" onclick="showTab('rewards')">
+                        🏆 Belohnungen
+                    </button>
+                    <button class="tab-button" onclick="showTab('levels')">
+                        📊 Level
+                    </button>
                 </div>
-                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Änderungen speichern</button>
-            </div>
-        </div>
 
-        <!-- Level Configuration Tab -->
-        <div id="levels-tab" class="tab-content">
-            <div class="admin-section">
-                <h3>📊 Level-Konfiguration</h3>
-                
-                <!-- Level System Settings -->
-                <div style="margin-bottom: 2rem;">
-                    <h4>⚙️ Level-System Einstellungen</h4>
-                    <div class="config-grid" id="level-config">
+                <!-- Users Tab -->
+                <div id="users-tab" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">👥 Benutzerverwaltung</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                    <table class="table" id="users-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Benutzername</th>
+                                                <th>Rolle</th>
+                                                <th>E-Mail</th>
+                                                <th>Erstellt</th>
+                                                <th>Letzter Login</th>
+                                                <th>Status</th>
+                                                <th>Aktionen</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-tbody">
+                                            <!-- Users will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <!-- General Config Tab -->
+                <div id="general-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚙️ Allgemeine Einstellungen</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="config-grid" id="general-config">
+                                <!-- Config items will be populated here -->
+                            </div>
+                            <div class="btn-group mt-6">
+                                <button class="btn btn-danger" onclick="resetApplication()">🔄 System zurücksetzen</button>
+                                <button class="btn btn-success" onclick="saveAllConfig()">Änderungen speichern</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Level Titles Management -->
-                <div>
-                    <h4>🏆 Level-Titel verwalten</h4>
-                    <table class="level-titles-table" id="level-titles-table">
-                        <thead>
-                            <tr>
-                                <th>Level</th>
-                                <th>Titel</th>
-                                <th>Emoji</th>
-                                <th>Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody id="level-titles-tbody">
-                        </tbody>
-                    </table>
-                    <button class="btn btn-primary" onclick="addLevelTitle()">Level-Titel hinzufügen</button>
-                    <button class="btn btn-success" onclick="saveLevelTitles()">Alle Titel speichern</button>
+
+            <!-- XP System Tab -->
+            <div id="xp-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>💎 XP-System Einstellungen</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="config-grid" id="exp-config">
+                        </div>
+                        <div class="btn-group mt-lg">
+                            <button class="btn btn-success" onclick="saveAllConfig()">Änderungen speichern</button>
+                        </div>
+                    </div>
                 </div>
-                
-                <button class="btn btn-success" style="margin-top: 1rem;" onclick="saveAllConfig()">Alle Änderungen speichern</button>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div id="rewards-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🏆 Belohnungen</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="config-grid" id="rewards-config-section">
+                        </div>
+                        <div class="btn-group mt-lg">
+                            <button class="btn btn-success" onclick="saveAllConfig()">Änderungen speichern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Configuration Tab -->
+            <div id="levels-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📊 Level-Konfiguration</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Level System Settings -->
+                        <div class="mb-xl">
+                            <h4 class="text-accent">⚙️ Level-System Einstellungen</h4>
+                            <div class="config-grid" id="level-config">
+                            </div>
+                        </div>
+                        
+                        <!-- Level Titles Management -->
+                        <div>
+                            <h4 class="text-accent">🏆 Level-Titel verwalten</h4>
+                            <table class="table" id="level-titles-table">
+                                <thead>
+                                    <tr>
+                                        <th>Level</th>
+                                        <th>Titel</th>
+                                        <th>Emoji</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="level-titles-tbody">
+                                </tbody>
+                            </table>
+                            <div class="btn-group mt-lg">
+                                <button class="btn btn-primary" onclick="addLevelTitle()">Level-Titel hinzufügen</button>
+                                <button class="btn btn-success" onclick="saveLevelTitles()">Alle Titel speichern</button>
+                            </div>
+                        </div>
+                        
+                        <div class="btn-group mt-xl">
+                            <button class="btn btn-success" onclick="saveAllConfig()">Alle Änderungen speichern</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

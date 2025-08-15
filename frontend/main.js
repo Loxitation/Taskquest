@@ -11,6 +11,7 @@ import { showNotificationBanner, showMissedNotifications } from './modules/notif
 import { getLevel } from './modules/exp.js';
 import { getRank } from './modules/ranks.js';
 import { updateClaimedRewards } from './modules/api.js';
+import { smartUpdater } from './modules/smart-updates.js';
 
 let currentUser = null;
 let currentPlayerId = null;
@@ -49,42 +50,59 @@ async function checkAuth() {
 
 // Update navigation with current user info
 function updateNavigation() {
-  // Remove player selector if it exists
-  const playerSelect = document.getElementById('player-select');
-  if (playerSelect) {
-    playerSelect.style.display = 'none';
+  // Update player name in navigation
+  const playerNameElement = document.getElementById('current-player-name');
+  const playerEmojiElement = document.getElementById('current-player-level-emoji');
+  const playerTitleElement = document.getElementById('current-player-level-title');
+  const playerExpBarElement = document.getElementById('current-player-exp-bar');
+  const playerExpTextElement = document.getElementById('current-player-exp-text');
+  
+  if (playerNameElement && currentUser) {
+    const player = getPlayerById(currentPlayerId) || { name: currentUser.username };
+    const stats = getPlayerStatsById(currentPlayerId) || { exp: 0 };
+    const level = getLevel(stats.exp || 0);
+    const levelTitle = getLevelTitle(level);
+    const levelEmoji = getLevelEmoji(level);
+    
+    // Calculate experience progress
+    const currentExp = stats.exp || 0;
+    const currentLevelExp = Math.pow(2, level - 1) * 100 - 100;
+    const nextLevelExp = Math.pow(2, level) * 100 - 100;
+    const progressExp = currentExp - currentLevelExp;
+    const neededExp = nextLevelExp - currentLevelExp;
+    const progressPercent = Math.min(100, (progressExp / neededExp) * 100);
+    
+    // Update all elements
+    playerNameElement.textContent = `${player.name} (Level ${level})`;
+    
+    if (playerEmojiElement) {
+      playerEmojiElement.textContent = levelEmoji;
+    }
+    
+    if (playerTitleElement) {
+      playerTitleElement.textContent = levelTitle;
+      playerTitleElement.style.color = '#fbbf24';
+    }
+    
+    if (playerExpBarElement) {
+      playerExpBarElement.style.width = `${progressPercent}%`;
+    }
+    
+    if (playerExpTextElement) {
+      playerExpTextElement.textContent = `${progressExp} / ${neededExp} XP`;
+    }
+  } else if (playerNameElement) {
+    // Fallback if no current user yet
+    playerNameElement.innerHTML = '🔄 Lade Daten...';
+    if (playerTitleElement) playerTitleElement.textContent = '';
+    if (playerExpTextElement) playerExpTextElement.textContent = '';
   }
   
-  // Add user info to navigation
-  const navElement = document.querySelector('.nav-section') || document.body;
-  let userNav = document.getElementById('user-navigation');
-  
-  if (!userNav) {
-    userNav = document.createElement('div');
-    userNav.id = 'user-navigation';
-    userNav.style.cssText = `
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #1f2937;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 5px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      z-index: 1000;
-    `;
-    document.body.appendChild(userNav);
+  // Show/hide admin link
+  const adminLink = document.getElementById('admin-link-header');
+  if (adminLink && currentUser) {
+    adminLink.style.display = currentUser.role === 'admin' ? 'inline-flex' : 'none';
   }
-  
-  userNav.innerHTML = `
-    <span style="font-weight: 600;">${currentUser.username}</span>
-    ${currentUser.role === 'admin' ? '<span style="color: #ef4444; font-size: 0.8rem; margin-left: 0.5rem;">ADMIN</span>' : ''}
-    <div style="margin-top: 0.25rem; font-size: 0.8rem;">
-      <a href="/profile.html" style="color: #93c5fd; text-decoration: none; margin-right: 0.5rem;">Profile</a>
-      ${currentUser.role === 'admin' ? '<a href="/admin.html" style="color: #fbbf24; text-decoration: none; margin-right: 0.5rem;">Admin</a>' : ''}
-      <a href="#" onclick="logout()" style="color: #f87171; text-decoration: none;">Logout</a>
-    </div>
-  `;
 }
 
 async function loadAllData() {
@@ -238,38 +256,8 @@ function updateExpInfobox() {
 }
 
 function updatePlayerInfo() {
-  const stats = getPlayerStatsById(currentPlayerId);
-  const player = getPlayerById(currentPlayerId) || { name: currentUser?.username || 'Unknown' };
-  const level = getLevel(stats.exp||0);
-  // Correct next/prev level XP for new formula
-  const nextLevelExp = 100 * (Math.pow(2, level) - 1);
-  const prevLevelExp = level > 1 ? 100 * (Math.pow(2, level-1) - 1) : 0;
-  const rank = getRank(level);
-  const levelTitle = getLevelTitle(level);
-  
-  // Get level emoji from configuration (per-level or fallback to global)
-  const levelEmoji = getLevelEmoji(level);
-  
-  const info = document.getElementById('current-player-info');
-  if (info) {
-    const expThisLevel = (stats.exp||0) - prevLevelExp;
-    const expNeeded = nextLevelExp - prevLevelExp;
-    const expPercent = expNeeded > 0 ? Math.min(100, Math.max(0, (expThisLevel / expNeeded) * 100)) : 0;
-    
-    // Use level title if available, otherwise fall back to rank
-    const displayTitle = levelTitle || rank;
-    
-    info.innerHTML = `
-      <span style="font-weight:bold;">Current Player: ${player.name}</span>
-      | <span style="font-weight:bold;">Level: ${level}</span>
-      ${displayTitle ? `<span style="color:#b97a56;font-size:1.1em;">${levelEmoji} ${displayTitle}</span>` : ''}
-      | <span style="font-weight:bold;">EXP: ${stats.exp||0}</span>
-      <div class="exp-bar-outer" style="height:14px;margin:6px 0 2px 0;width:100%;">
-        <div class="exp-bar-inner" style="width:${expPercent}%;height:100%;"></div>
-      </div>
-      <span style="font-size:0.95em;">${expThisLevel} / ${expNeeded} XP to Level ${level+1}</span>
-    `;
-  }
+  // This function now just triggers scoreboard update
+  // Player info is handled by updateNavigation()
   renderScoreboard(currentPlayerId);
 }
 
@@ -308,13 +296,13 @@ function renderRewardsUI() {
   box.innerHTML = currentRewards.map(r => {
     const isClaimed = claimed.includes(r.id);
     const canClaim = level >= r.level && !isClaimed;
-    return `<div class="reward-card" style="border:2px solid ${isClaimed ? '#7ed957' : '#ffb347'};border-radius:10px;padding:0.7em 1em;margin-bottom:0.7em;background:${isClaimed ? '#232f23' : '#232526'};color:${isClaimed ? '#7ed957' : '#ffb347'};">
-      <div style="font-weight:bold;font-size:1.1em;">${r.name}</div>
-      <div style="font-size:0.98em;">${r.description}</div>
-      <div style="font-size:0.95em;">Level: ${r.level}</div>
-      ${isClaimed ? '<span style="color:#7ed957;font-weight:bold;">Bereits erhalten</span>' :
+    return `<div class="reward-card ${isClaimed ? 'claimed' : canClaim ? 'available' : 'locked'}">
+      <div class="reward-name">${r.name}</div>
+      <div class="reward-description">${r.description}</div>
+      <div class="reward-level">Level: ${r.level}</div>
+      ${isClaimed ? '<span class="reward-status claimed">Bereits erhalten</span>' :
         canClaim ? `<button class="claim-reward" data-rewardid="${r.id}">Belohnung einlösen</button>` :
-        `<span style="color:#888;">Noch nicht verfügbar</span>`}
+        `<span class="reward-status locked">Noch nicht verfügbar</span>`}
     </div>`;
   }).join('');
   
@@ -384,9 +372,9 @@ async function main() {
   showTaskDetails = privacy.showOtherPlayersTasks === true;
   
   // Show loading state
-  const playerInfo = document.getElementById('current-player-info');
-  if (playerInfo) {
-    playerInfo.innerHTML = '<span style="color: #ffb347;">🔄 Lade Daten...</span>';
+  const playerNameElement = document.getElementById('current-player-name');
+  if (playerNameElement) {
+    playerNameElement.innerHTML = '🔄 Lade Daten...';
   }
   
   // Load critical data first and show basic UI
@@ -396,7 +384,9 @@ async function main() {
   ]);
   
   // Update UI with basic data immediately
+  updateNavigation();
   updatePlayerInfo();
+  renderScoreboard(currentPlayerId); // Render scoreboard right after data loads
   renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
   
   // Setup basic functionality
@@ -411,6 +401,7 @@ async function main() {
     loadAdminConfig()
   ]).then(() => {
     // Update UI with complete data
+    updateNavigation();
     updatePlayerInfo(); // Refresh with level titles
     renderScoreboard(currentPlayerId);
     renderRewardsUI();
@@ -419,21 +410,27 @@ async function main() {
   
   // Setup sockets
   setupSocket(async () => {
-    await loadAllData();
-    renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
-    updatePlayerInfo();
-    renderRewardsUI();
-    updatePendingApprovalNotification();
+    // Use smart updater to prevent interrupting user input
+    await smartUpdater.smartUpdate(async () => {
+      await loadAllData();
+      renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
+      updatePlayerInfo();
+      renderRewardsUI();
+      updatePendingApprovalNotification();
+    });
   });
   setupNotificationSocket(n => {
     showNotificationBanner(n, rewards, currentPlayerId);
   });
   // Setup add-task form
   setupAddTaskForm(async () => {
-    await loadAllData();
-    renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
-    renderRewardsUI();
-    updatePendingApprovalNotification();
+    // Use smart updater for form submissions too
+    await smartUpdater.smartUpdate(async () => {
+      await loadAllData();
+      renderTasksUI(currentPlayerId, currentFilter, showTaskDetails);
+      renderRewardsUI();
+      updatePendingApprovalNotification();
+    });
   }, () => currentPlayerId);
   
   // Initialize personal notes (low priority)

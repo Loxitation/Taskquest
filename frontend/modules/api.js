@@ -1,17 +1,6 @@
-// API utility functions for TaskQuest (with authentication)
+// API utility functions for TaskQuest
 export async function fetchJSON(url, options = {}) {
-  // Always include credentials for authentication
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include'
-  });
-  
-  if (res.status === 401) {
-    // Unauthorized - redirect to login
-    window.location.href = '/login.html';
-    throw new Error('Authentication required');
-  }
-  
+  const res = await fetch(url, options);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
@@ -29,10 +18,10 @@ export async function getPlayers() {
   return fetchJSON('/api/players');
 }
 export async function getRanks() {
-  return fetchJSON('/api/ranks');
+  return fetchJSON('/ranks.json');
 }
 export async function getRewards() {
-  return fetchJSON('/api/rewards');
+  return fetchJSON('/rewards.json');
 }
 export async function addTask(task) {
   return fetchJSON('/api/tasks', {
@@ -75,14 +64,4 @@ export async function updateClaimedRewards(playerId, name, exp, claimedRewards) 
     body: JSON.stringify({ id: playerId, name, exp, claimedRewards })
   });
 }
-
-// Admin functions
-export async function updateUser(userId, data) {
-  return fetchJSON(`/api/admin/users/${userId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-}
-
 // Add more API helpers as needed

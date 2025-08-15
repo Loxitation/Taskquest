@@ -8,12 +8,14 @@
 </head>
 <body>
   <div id="player-select-bar">
+    <label for="player-select">Spieler:</label>
+    <select id="player-select">
+      <!-- Options will be populated dynamically -->
+    </select>
     <span id="current-player-info" style="margin-left: 1rem;">
-      Current Player: <b>Loading...</b>
+      Aktueller Spieler: <b>Leon</b>
     </span>
-    <div id="pending-approval-notification" style="margin: 0 auto; background: #ff6b35; color: white; padding: 0.5rem 1rem; border-radius: 5px; display: none; z-index: 100; position: relative;">
-      🔔 <span id="pending-count">0</span> Aufgaben warten auf Ihre Genehmigung
-    </div>
+    <button id="reset-app" type="button" style="background:#232526;color:#ffb347;border:1.5px solid #ffb347;border-radius:6px;padding:0.4rem 1.2rem;cursor:pointer;margin-left:auto;">Reset</button>
   </div>
 
   <h1>🧙‍♂️ TaskQuest</h1>
@@ -21,11 +23,6 @@
   <div class="main-layout">
     <aside class="left-col">
       <div id="scoreboard-box" class="scoreboard-box"></div>
-      <div id="personal-notes-box" class="personal-notes-box">
-        <h3>📝 Persönliche Notizen</h3>
-        <textarea id="personal-notes" placeholder="Ihre persönlichen Notizen hier..."></textarea>
-        <div class="notes-info">Nur für Sie sichtbar</div>
-      </div>
     </aside>
     <main class="center-col">
       <div id="add-task-box" class="add-task-box">
@@ -60,119 +57,28 @@
         <button id="toggle-exp-rewards" class="toggle-box-btn">Infocenter einblenden/ausblenden</button>
         <div id="exp-rewards-content">
           <div id="exp-explanation-box" class="exp-explanation-box">
+            <h3 style="display:flex;align-items:center;justify-content:space-between;">
+              EXP Berechnung
+              
+            </h3>
             <div id="exp-explanation-content">
-              
-              <!-- XP Calculation Section -->
-              <div class="collapsible-section">
-                <div class="section-header" onclick="toggleSection('xp-calculation')">
-                  <h4>📊 XP Berechnung</h4>
-                  <span class="collapse-indicator">▼</span>
-                </div>
-                <div id="xp-calculation" class="section-content">
-                  <div class="exp-formula">
-                    <div class="formula-part">
-                      <span class="formula-label">Basis-XP:</span>
-                      <span class="formula-value">10 × Schwierigkeit</span>
-                      <div class="formula-example">
-                        <span class="example-label">Beispiel:</span>
-                        <span class="example-values">
-                          <span class="difficulty-1">Diff 1: 10</span>
-                          <span class="difficulty-5">Diff 5: 50</span>
-                        </span>
-                      </div>
-                    </div>
-                  
-                  <div class="formula-part">
-                    <span class="formula-label">Dringlichkeits-Bonus:</span>
-                    <span class="formula-value">+ 5 × Dringlichkeit</span>
-                    <div class="formula-example">
-                      <span class="example-label">Beispiel:</span>
-                      <span class="example-values">
-                        <span class="urgency-1">Urg 1: +5</span>
-                        <span class="urgency-5">Urg 5: +25</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div class="formula-part">
-                    <span class="formula-label">Zeit-Bonus:</span>
-                    <span class="formula-value">+ 1 XP pro Minute</span>
-                    <div class="formula-example">
-                      <span class="example-label">Beispiel:</span>
-                      <span class="example-values">
-                        <span class="time-15">15min: +15</span>
-                        <span class="time-60">60min: +60</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div class="formula-part bonus">
-                    <span class="formula-label">⏰ Rechtzeitig-Bonus:</span>
-                    <span class="formula-value">+ 20 XP</span>
-                    <div class="formula-example">
-                      <span class="bonus-text">Wenn vor Fälligkeitsdatum erledigt</span>
-                    </div>
-                  </div>
-                  
-                  <div class="formula-part penalty">
-                    <span class="formula-label">⚠️ Verspätungsstrafe:</span>
-                    <span class="formula-value">Exponentiell reduziert</span>
-                    <div class="formula-example">
-                      <span class="penalty-text">
-                        1-7 Tage: -10% | 8-14 Tage: -25% | 15-21 Tage: -50% | 21+ Tage: -10 XP
-                      </span>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- XP Calculator Section -->
-              <div class="collapsible-section">
-                <div class="section-header" onclick="toggleSection('xp-calculator')">
-                  <h4>🧮 XP Rechner</h4>
-                  <span class="collapse-indicator">▼</span>
-                </div>
-                <div id="xp-calculator" class="section-content">
-                  <div class="calculator-example">
-                    <strong>Beispiel:</strong> Schwierigkeit 3, Dringlichkeit 2, 45min, rechtzeitig
-                    <div class="calculation-steps">
-                      <span>Basis: 30 + Dringlichkeit: 10 + Zeit: 45 + Bonus: 20</span>
-                      <span class="total">Gesamt = <strong>105 XP</strong></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- XP Tips Section -->
-              <div class="collapsible-section">
-                <div class="section-header" onclick="toggleSection('xp-tips')">
-                  <h4>💡 Tipps</h4>
-                  <span class="collapse-indicator">▼</span>
-                </div>
-                <div id="xp-tips" class="section-content collapsed">
-                  <ul>
-                    <li>🎯 Höhere Schwierigkeit = Mehr XP</li>
-                    <li>🔥 Dringliche Aufgaben geben Bonus</li>
-                    <li>⏱️ Längere Arbeitszeit = Zeit-Bonus</li>
-                    <li>📅 Rechtzeitige Erledigung wird belohnt</li>
-                  </ul>
-                </div>
-              </div>
-              </div>
+              <table>
+                <tr><th>Faktor</th><th>Wert</th></tr>
+                <tr><td>Basis</td><td>10 × Schwierigkeit</td></tr>
+                <tr><td>Dringlichkeit</td><td>+ 5 × Dringlichkeit</td></tr>
+                <tr><td>Zeitaufwand</td><td>+ 1 EXP pro Minute</td></tr>
+                <tr><td>Bonus</td><td>+ 20 EXP, wenn vor Fälligkeitsdatum erledigt</td></tr>
+                <tr><td>Strafe</td><td>EXP werden exponentiell reduziert, wenn überfällig (siehe unten)</td></tr>
+              </table>
+              <b>Beispiel:</b><br>
+              Schwierigkeit: 3, Dringlichkeit: 2, Zeit: 45min, rechtzeitig<br>
+              <b>EXP = 10×3 + 5×2 + 45 + 20 = 105</b><br>
+              <br>
+              <b>Strafregel:</b> Je mehr Tage überfällig, desto weniger EXP. Ab 21 Tagen: -10 EXP.<br>
+              <span style="color:#7ed957;">Je dringender, desto kürzer darf das Fälligkeitsdatum in der Zukunft liegen!</span>
             </div>
           </div>
-          
-          <!-- Rewards Section -->
-          <div class="collapsible-section">
-            <div class="section-header" onclick="toggleSection('rewards-content')">
-              <h4>🏆 Belohnungen</h4>
-              <span class="collapse-indicator">▼</span>
-            </div>
-            <div id="rewards-content" class="section-content">
-              <div id="rewards-box" class="rewards-box"></div>
-            </div>
-          </div>
+          <div id="rewards-box" class="rewards-box"></div>
         </div>
       </div>
     </aside>
